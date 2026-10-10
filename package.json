@@ -1,0 +1,11 @@
+{
+  "name": "cello-planner",
+  "private": true,
+  "description": "Planner de séances de violoncelle (site statique, GitHub Pages)",
+  "scripts": {
+    "test": "node tests/smoke.js"
+  },
+  "devDependencies": {
+    "playwright": "^1.47.0"
+  }
+}
