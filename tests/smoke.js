@@ -143,10 +143,6 @@ const check = (cond, msg) => { if (!cond) fails.push(msg); console.log((cond ? '
   await p.click('#tuOpen');
   check(await p.locator('#tl-tuner .tbody').isVisible() === false, 'accordeur : taper sur le nom le ferme');
   await p.click('#tuOpen'); await p.click('#tuBtn'); await p.click('#tuBtn');
-  await p.click('#tuRef');
-  check(await p.evaluate(() => !!REFTONE) && (await p.innerText('#tuRef')).includes('Arrêter'), 'La de référence : démarré, bouton « Arrêter »');
-  await p.click('#tuRef');
-  check(await p.evaluate(() => !REFTONE) && (await p.innerText('#tuRef')).includes('Jouer'), 'La de référence : un second appui l’arrête');
   await p.evaluate(() => startMetro({ bpm: 80 })); await p.click('#meOpen');
   check(await p.evaluate(() => !metroT && document.getElementById('tl-metro').querySelector('.tbody').offsetParent === null), 'métronome : taper sur le nom le ferme');
   await p.click('#meOpen');

@@ -117,7 +117,7 @@ function blockHtml(b,P,done,date){
       +(it&&it.key?'<p class="sub">Tonalité : '+esc(it.key)+' ('+esc(name(it))+')</p>':'')
       +(b.min>=8?'<p>Ajoute les intervalles : depuis la tonique, chante une tierce, une quinte, une octave, puis vérifie sur l’instrument.</p>':'')
       +(PRINT?'<p>Bourdon sur <strong>'+esc(ton)+'</strong></p>'
-        :droneTools('a',ton,'<button class="btn ghost small refBtn" id="refA" data-l="▶ La pour accorder" onclick="toggleRefTone()" title="La de la corde à vide, d’après le diapason">▶ La pour accorder</button>'));
+        :droneTools('a',ton,''));
   }else if(b.type==='lect'){
     title='Lecture chantée';
     const L=lectureSource(P,date),tf=tonicFor(P),dflt=(P.pr&&P.pr.tonic)||(tf&&tf.tonic)||'Sol';

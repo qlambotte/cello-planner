@@ -13,25 +13,70 @@ function parseNote(str){
   return 12*((m[3]!==undefined?parseInt(m[3],10):3)+1)+pc;
 }
 
-/* timbre de corde frottée : série harmonique riche, deux voix légèrement désaccordées, résonances du corps */
-let CELLO_WAVE=null;
+/* timbre de corde frottée : spectre riche en harmoniques, trois voix légèrement désaccordées, résonances du corps,
+   bruit d'archet très discret, vibrato qui s'installe doucement, petite réverbération de salle */
+let CELLO_WAVE=null,NOISE_BUF=null,REVERB=null;
 function celloWave(c){
   if(CELLO_WAVE)return CELLO_WAVE;
-  const N=24,re=new Float32Array(N+1),im=new Float32Array(N+1);
-  for(let k=1;k<=N;k++)im[k]=(1/Math.pow(k,1.15))*(k%2===0?.85:1)*(k>12?.6:1);
+  const N=40,re=new Float32Array(N+1),im=new Float32Array(N+1);
+  for(let k=1;k<=N;k++)im[k]=(1/Math.pow(k,1.05))*(k%2===0?.9:1)*(k>14?.5:1)*(k===3?1.15:1);
   CELLO_WAVE=c.createPeriodicWave(re,im);return CELLO_WAVE;
 }
 function celloVoice(c,f,dest,gain,detune){
   const o=c.createOscillator();o.setPeriodicWave(celloWave(c));o.frequency.value=f;o.detune.value=detune||0;
   const g=c.createGain();g.gain.value=gain;o.connect(g);g.connect(dest);o.start();return {o,g};
 }
-function celloBus(c){
-  const lp=c.createBiquadFilter();lp.type='lowpass';lp.frequency.value=2200;lp.Q.value=.4;
-  const p1=c.createBiquadFilter();p1.type='peaking';p1.frequency.value=230;p1.Q.value=1.1;p1.gain.value=4;
-  const p2=c.createBiquadFilter();p2.type='peaking';p2.frequency.value=520;p2.Q.value=1.6;p2.gain.value=3;
-  const out=c.createGain();out.gain.value=0;
-  lp.connect(p1);p1.connect(p2);p2.connect(out);out.connect(c.destination);
+function noiseBuf(c){
+  if(NOISE_BUF)return NOISE_BUF;
+  const n=c.sampleRate*2,b=c.createBuffer(1,n,c.sampleRate),d=b.getChannelData(0);
+  for(let i=0;i<n;i++)d[i]=Math.random()*2-1;
+  NOISE_BUF=b;return b;
+}
+function reverbNode(c){
+  if(REVERB&&REVERB.ctx===c)return REVERB.node;
+  const len=Math.floor(c.sampleRate*1.7),ir=c.createBuffer(2,len,c.sampleRate);
+  for(let ch=0;ch<2;ch++){const d=ir.getChannelData(ch);let lp=0;
+    for(let i=0;i<len;i++){const t=i/len;lp+=((Math.random()*2-1)-lp)*(.55-.4*t);d[i]=lp*Math.pow(1-t,2.6)*(i<c.sampleRate*.012?i/(c.sampleRate*.012):1)}}
+  const cv=c.createConvolver();cv.buffer=ir;const wet=c.createGain();wet.gain.value=1;cv.connect(wet);wet.connect(c.destination);
+  REVERB={ctx:c,node:cv};return cv;
+}
+function celloBus(c,f,opt){
+  opt=opt||{};f=f||220;
+  const lp=c.createBiquadFilter();lp.type='lowpass';lp.frequency.value=Math.max(1400,Math.min(4200,f*7));lp.Q.value=.6;
+  const chain=[[110,3,.9],[250,4,1.1],[520,3,1.4],[1000,2,1.2]].map(([fq,gn,q])=>{const p=c.createBiquadFilter();p.type='peaking';p.frequency.value=fq;p.Q.value=q;p.gain.value=gn;return p});
+  const sh=c.createBiquadFilter();sh.type='highshelf';sh.frequency.value=2800;sh.gain.value=-5;
+  let prev=lp;chain.concat([sh]).forEach(n=>{prev.connect(n);prev=n});
+  const out=c.createGain();out.gain.value=0;prev.connect(out);out.connect(c.destination);
+  if(opt.room!==false){const send=c.createGain();send.gain.value=opt.room||.2;out.connect(send);send.connect(reverbNode(c))}
   return {input:lp,out};
+}
+/* une note tenue : attaque douce, vibrato qui s'installe, bruit d'archet discret ; stop() la relâche */
+function startTone(m,o){
+  o=o||{};
+  const c=ctx(),f=midiFreq(m),t=c.currentTime+(o.delay||0),bus=celloBus(c,f,{room:o.room}),lvl=o.level||.5;
+  const vs=[celloVoice(c,f,bus.input,.34,-6),celloVoice(c,f,bus.input,.34,0),celloVoice(c,f,bus.input,.34,6)];
+  const extra=[];
+  if(o.vib!==false){
+    const l=c.createOscillator(),lg=c.createGain();l.frequency.value=5.2+Math.random()*.5;lg.gain.setValueAtTime(0,t);lg.gain.setValueAtTime(0,t+(o.vibAfter||.45));lg.gain.linearRampToValueAtTime(o.vibDepth||7,t+(o.vibAfter||.45)+.9);
+    l.connect(lg);vs.forEach(v=>lg.connect(v.o.detune));l.start(t);extra.push(l);
+  }
+  if(o.noise!==false){
+    const n=c.createBufferSource();n.buffer=noiseBuf(c);n.loop=true;
+    const bp=c.createBiquadFilter();bp.type='bandpass';bp.frequency.value=Math.min(3000,f*3);bp.Q.value=.8;
+    const ng=c.createGain();ng.gain.setValueAtTime(.0001,t);ng.gain.linearRampToValueAtTime(.05,t+.04);ng.gain.exponentialRampToValueAtTime(.008,t+.35);
+    n.connect(bp);bp.connect(ng);ng.connect(bus.input);n.start(t);extra.push(n);
+  }
+  const g=bus.out.gain,att=o.attack||.1;
+  g.setValueAtTime(0,t);g.linearRampToValueAtTime(lvl*1.12,t+att*.7);g.linearRampToValueAtTime(lvl,t+att*1.6);
+  const stopAll=(at)=>{vs.forEach(v=>v.o.stop(at));extra.forEach(e=>{try{e.stop(at)}catch(_){}})};
+  let ended=false;
+  return {stop(rel){
+    if(ended)return;ended=true;const n=Math.max(c.currentTime,t),r=rel||.3;
+    try{g.cancelScheduledValues(n);g.setValueAtTime(g.value,n);g.linearRampToValueAtTime(0,n+r);stopAll(n+r+.05)}catch(_){}
+  },stopAt(at,rel){
+    if(ended)return;ended=true;const r=rel||.4;
+    g.setValueAtTime(lvl,t+at);g.linearRampToValueAtTime(0,t+at+r);stopAll(t+at+r+.1);
+  }};
 }
 let drone=null;
 function stopDrone(){
@@ -43,30 +88,46 @@ function stopDrone(){
 function toggleDrone(slot){
   if(drone){const same=drone.slot===slot;stopDrone();if(same)return}
   const sel=document.getElementById('tonicSel-'+slot);if(!sel||!sel.value)return;
-  startDrone(slot,sel.value,document.getElementById('octSel-'+slot).value==='1',document.getElementById('fifthChk-'+slot).checked);
+  startDrone(slot,sel.value,document.getElementById('octSel-'+slot).value==='1',+document.getElementById('extSel-'+slot).value);
 }
-function startDrone(slot,ton,hi,fifth){
+/* bourdon : voix unique exactement à la hauteur (pas de désaccord, donc pas de battements parasites), timbre riche mais doux ;
+   ext = 0 tonique seule, 1 avec la quinte pure (3:2), 2 avec l'octave. true = quinte. */
+function startDrone(slot,ton,hi,ext){
   if(drone)stopDrone();
-  const c=ctx(),bus=celloBus(c),f=midiFreq(36+PC[ton]+(hi?12:0));
-  const voices=[celloVoice(c,f,bus.input,.45,-4),celloVoice(c,f,bus.input,.45,5),celloVoice(c,f*2,bus.input,.12,0)];
-  if(fifth){const f5=f*Math.pow(2,7/12);voices.push(celloVoice(c,f5,bus.input,.3,-3),celloVoice(c,f5,bus.input,.3,4))}
-  const t=c.currentTime;bus.out.gain.setValueAtTime(0,t);bus.out.gain.linearRampToValueAtTime(.55,t+.9);
-  drone={slot,ton,bus,voices};
+  ext=ext===true?1:(+ext||0);
+  const c=ctx(),f=midiFreq(36+PC[ton]+(hi?12:0)),bus=celloBus(c,f*2.2,{room:.1});
+  const voices=[celloVoice(c,f,bus.input,.62,0),celloVoice(c,f*2,bus.input,.1,0)];
+  if(ext===1)voices.push(celloVoice(c,f*1.5,bus.input,.36,0),celloVoice(c,f*3,bus.input,.05,0));
+  if(ext===2)voices.push(celloVoice(c,f*2,bus.input,.3,0));
+  const t=c.currentTime;bus.out.gain.setValueAtTime(0,t);bus.out.gain.linearRampToValueAtTime(.5,t+1);
+  drone={slot,ton,bus,voices,ext};
   const b=document.getElementById('droneBtn-'+slot);if(b)b.textContent='■ Arrêter';
   if(typeof paintTools==='function')paintTools();
 }
 function redrone(slot){const l=document.getElementById('droneLbl-'+slot);if(l)l.textContent=droneLabel(slot);if(drone&&drone.slot===slot){stopDrone();toggleDrone(slot)}}
-function playMidi(m,dur,delay){
-  const c=ctx(),bus=celloBus(c),t=c.currentTime+(delay||0),f=midiFreq(m);
-  const vs=[celloVoice(c,f,bus.input,.5,-3),celloVoice(c,f,bus.input,.5,3)];
-  vs.forEach(v=>v.o.stop(t+dur+.6));
-  const g=bus.out.gain;g.setValueAtTime(0,t);g.linearRampToValueAtTime(.55,t+.08);g.setValueAtTime(.55,t+dur);g.linearRampToValueAtTime(0,t+dur+.5);
-  return {stop(){const n=c.currentTime;try{g.cancelScheduledValues(n);g.setValueAtTime(g.value,n);g.linearRampToValueAtTime(0,n+.08);vs.forEach(v=>v.o.stop(n+.12))}catch(e){}}};
+function playMidi(m,dur,delay,opt){
+  opt=opt||{};
+  const long=dur>=.8;
+  const tn=startTone(m,Object.assign({delay:delay||0,attack:Math.min(.11,dur*.3),vib:long,vibAfter:Math.min(.45,dur*.4),level:.5},opt));
+  tn.stopAt(dur,Math.min(.45,.15+dur*.12));
+  return {stop(){tn.stop(.1)}};
+}
+/* La de référence tenu, sans vibrato : un second appui l'arrête */
+let REFTONE=null,REFTIMER=null;
+function stopRefTone(){
+  if(!REFTONE)return;REFTONE.stop(.35);REFTONE=null;clearTimeout(REFTIMER);
+  document.querySelectorAll('.refBtn').forEach(b=>{b.textContent=b.dataset.l});
+}
+function toggleRefTone(){
+  if(REFTONE){stopRefTone();return}
+  REFTONE=startTone(57,{vib:false,noise:false,attack:.25,level:.42,room:.12});
+  REFTIMER=setTimeout(stopRefTone,30000);
+  document.querySelectorAll('.refBtn').forEach(b=>{b.textContent='■ Arrêter le La'});
 }
 function droneLabel(slot){
-  const t=document.getElementById('tonicSel-'+slot),f=document.getElementById('fifthChk-'+slot),o=document.getElementById('octSel-'+slot);
+  const t=document.getElementById('tonicSel-'+slot),f=document.getElementById('extSel-'+slot),o=document.getElementById('octSel-'+slot);
   if(!t)return '';
-  return 'sur '+t.value+(f&&f.checked?', avec la quinte':'')+(o&&o.value==='1'?', registre médium':'');
+  return 'sur '+t.value+(f&&f.value==='1'?', avec la quinte':f&&f.value==='2'?', avec l’octave':'')+(o&&o.value==='1'?', registre médium':'');
 }
 function droneTools(slot,ton,extra){
   if(!PC.hasOwnProperty(ton))ton='Sol';
@@ -75,7 +136,7 @@ function droneTools(slot,ton,extra){
     +'<details class="adv"><summary>Réglages du bourdon</summary><div class="tools">'
     +'<div class="fld"><label for="tonicSel-'+slot+'">Tonique</label><select id="tonicSel-'+slot+'" onchange="redrone(\''+slot+'\')">'+TONICS.map(t=>'<option'+(t===ton?' selected':'')+'>'+t+'</option>').join('')+'</select></div>'
     +'<div class="fld"><label for="octSel-'+slot+'">Registre</label><select id="octSel-'+slot+'" onchange="redrone(\''+slot+'\')"><option value="0">Grave</option><option value="1">Médium</option></select></div>'
-    +'<label class="sub" for="fifthChk-'+slot+'"><input type="checkbox" id="fifthChk-'+slot+'" checked onchange="redrone(\''+slot+'\')"> avec la quinte</label>'
+    +'<div class="fld"><label for="extSel-'+slot+'">Ajouter</label><select id="extSel-'+slot+'" onchange="redrone(\''+slot+'\')"><option value="0">Tonique seule</option><option value="1" selected>La quinte (pure)</option><option value="2">L’octave</option></select></div>'
     +'</div></details>';
 }
 
@@ -150,6 +211,6 @@ function diapHtml(id){
 function setDiapason(v){
   state.diapason=+v;save();
   document.querySelectorAll('.diapSel').forEach(e=>{e.value=String(v)});
-  const b=document.getElementById('refA');if(b)b.textContent='▶ La de référence ('+(state.diapason/2)+' Hz)';
-  if(drone){if(drone.slot==='w')startDrone('w',drone.ton,false,DW.fifth);else redrone(drone.slot)}
+  
+  if(drone){if(drone.slot==='w')startDrone('w',drone.ton,false,DW.ext);else redrone(drone.slot)}
 }

@@ -30,7 +30,7 @@ button{cursor:pointer}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
 .sync{font-size:.8rem;color:var(--muted)}
-.tabs{display:flex;gap:4px;margin-block:14px 20px;border-bottom:1px solid var(--line)}
+.tabs{display:flex;gap:4px;margin-block:14px 20px;border-bottom:1px solid var(--line);position:sticky;top:var(--toolsH,0px);z-index:4;background:var(--bg);overflow-x:auto}
 .tabs button{background:none;border:0;border-bottom:3px solid transparent;padding:10px 14px;font-weight:500;color:var(--muted)}
 .tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
 .eyebrow{font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600}
@@ -202,8 +202,8 @@ audio{width:100%}
 @media (orientation:portrait){
   #shell{flex-direction:column}
   #tools{position:sticky;top:0;z-index:5;border-bottom:1px solid var(--line)}
-  .tbar{display:flex;height:16dvh;min-height:76px}
-  .tool{display:none;height:33dvh;padding:8px 14px;flex-direction:column;border-top:1px solid var(--line)}
+  .tbar{display:flex;height:11dvh;min-height:64px}
+  .tool{display:none;height:30dvh;padding:8px 14px;flex-direction:column;border-top:1px solid var(--line)}
   #tools[data-sel="tuner"] #tl-tuner,#tools[data-sel="metro"] #tl-metro,#tools[data-sel="drone"] #tl-drone{display:flex}
   #tl-tuner .tclose{display:inline-block}
   .tool .tbody{flex:1}
