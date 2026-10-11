@@ -1,7 +1,7 @@
 /* ---------- coquille : onglets et rendu général ---------- */
 function render(){
   const app=document.getElementById('app');
-  stopAudio();
+  stopMic();
   if(!ready){app.innerHTML='<p class="sub">Chargement…</p>';return}
   let h='<div class="top"><h1>Planner violoncelle</h1><span class="sync" id="sync">'+esc(syncMsg)+'</span></div>';
   if(!state){
@@ -12,7 +12,7 @@ function render(){
   h+='<div class="tabs" role="tablist">'+T.map(([k,l])=>'<button role="tab" id="tab-'+k+'" aria-selected="'+(tab===k)+'" onclick="go(\''+k+'\')">'+l+'</button>').join('')+'</div>';
   h+=tab==='today'?renderToday():tab==='week'?renderWeek():tab==='stats'?renderStats():tab==='wizard'?renderWizard():renderProg();
   app.innerHTML=h;
-  paintTimer();paintGuided();
+  paintTimer();paintGuided();syncAudioUi();
 }
 function go(t){tab=t;pendingDel=null;render();window.scrollTo(0,0)}
 function startBlank(){state=blankState();save();render()}

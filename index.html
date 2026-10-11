@@ -15,6 +15,7 @@
 <script src="js/plan.js" defer></script>
 <script src="js/audio.js" defer></script>
 <script src="js/chrono.js" defer></script>
+<script src="js/tools.js" defer></script>
 <script src="js/micro.js" defer></script>
 <script src="js/app.js" defer></script>
 <script src="js/today.js" defer></script>
@@ -27,7 +28,7 @@
 <body>
 <input type="file" id="importFile" accept="application/json,.json" hidden onchange="onImport(this)">
 
-<div id="app"><p class="sub">Chargement…</p></div>
+<div id="shell"><aside id="tools" aria-label="Outils"></aside><main id="app"><p class="sub">Chargement…</p></main></div>
 <div id="printArea" aria-hidden="true"></div>
 
 </body>

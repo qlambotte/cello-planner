@@ -21,7 +21,7 @@ function init(){
   try{const s=localStorage.getItem(LS_KEY);state=s?JSON.parse(s):null}catch(e){state=null}
   if(state&&!Array.isArray(state.items))state=null;
   if(state)normalize(state);
-  ready=true;setSync(state?'Enregistré sur cet appareil':'');
+  ready=true;initTools();setSync(state?'Enregistré sur cet appareil':'');
   try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
   if('serviceWorker' in navigator&&/^https?:/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
   render();

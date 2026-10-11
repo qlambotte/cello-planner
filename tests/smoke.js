@@ -57,18 +57,23 @@ const check = (cond, msg) => { if (!cond) fails.push(msg); console.log((cond ? '
 
   // 4. chrono et séance guidée
   await p.evaluate(() => openDay(addDays(state.weekStart, 1)));
-  check(await p.locator('.chrono').count() === 6, 'un chrono par bloc');
+  check(await p.locator('.prow').count() === 6, 'aperçu : une ligne par phase');
+  await p.evaluate(() => gotoBlock('chant'));
+  check(await p.locator('.chrono').count() === 1 && await p.locator('.phase .block').count() === 1, 'une seule phase affichée, avec son chrono');
+  await p.evaluate(() => gotoPhase(0));
   await p.click('#guideBtn');
   await p.evaluate(() => { TM.end = Date.now() + 200; });
   await p.waitForTimeout(800);
-  check(await p.isChecked('#chk-chant') && await p.evaluate(() => TM && TM.bid) === 'lect', 'séance guidée : bloc coché puis bloc suivant lancé');
+  check(await p.evaluate(() => state.logs[addDays(state.weekStart, 1)].done.chant === true && TM && TM.bid) === 'lect' && await p.locator('#blk-lect').count() === 1, 'séance guidée : phase cochée puis phase suivante affichée et lancée');
   await p.evaluate(() => resetChrono());
 
   // 5. son : bourdon, note de départ, diapason ; changer d'onglet du navigateur ne coupe pas le bourdon
+  await p.evaluate(() => gotoBlock('lect'));
   await p.click('#droneBtn-b');
   await p.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
   check(await p.evaluate(() => !!drone), 'bourdon toujours actif après un changement de visibilité');
   await p.click('#droneBtn-b');
+  await p.evaluate(() => gotoBlock('chant'));
   check(await p.locator('#tonicSel-a').isVisible() === false, 'réglages du bourdon repliés par défaut');
   await p.click('#tab-week'); await p.selectOption('#diapSel-w', '442');
   check(await p.evaluate(() => Math.round(midiFreq(57) * 10) / 10) === 221, 'diapason 442 → la de la corde à vide à 221 Hz');
@@ -77,17 +82,52 @@ const check = (cond, msg) => { if (!cond) fails.push(msg); console.log((cond ? '
   check(pitch.join() === '98,196,440', 'détection de hauteur sur sons de synthèse : ' + pitch.join(', '));
 
   // 6. micro et enregistrement (périphérique simulé)
+  await p.evaluate(() => gotoBlock('lect'));
   await p.click('#blk-lect details:has(#micBtn) summary');
   await p.click('#micBtn'); await p.waitForTimeout(600); await p.click('#micBtn');
-  await p.click('#recBtn-continu'); await p.waitForTimeout(1200); await p.click('#recBtn-continu');
+  await p.evaluate(() => gotoBlock('continu'));
+  await p.click('#recBtn-continu'); await p.waitForTimeout(1200); await p.evaluate(() => gotoBlock('continu'));
+  await p.click('#recBtn-continu');
   await p.waitForSelector('#aud-continu', { timeout: 5000 }).then(() => check(true, 'enregistrement puis lecteur audio'), () => check(false, 'enregistrement puis lecteur audio'));
 
   // 6 bis. bilan intégré au dernier bloc, statut de la journée
+  await p.evaluate(() => gotoBlock('clot'));
   check(await p.locator('#blk-clot #r-co').count() === 1 && await p.locator('#finishBtn').count() === 0, 'bilan dans le dernier bloc, plus de bouton « Terminer »');
   await p.evaluate(() => tick('cible', addDays(state.weekStart, 1), true));
   check((await p.innerText('#dayStatus')).startsWith('Séance comptée'), 'statut : séance comptée dès le travail ciblé coché');
   const words = await p.evaluate(() => { let t = ''; for (const k of ['today', 'week', 'prog']) { tab = k; render(); t += document.getElementById('app').innerText; } tab = 'today'; render(); return t; });
   check(!/Poids|Principal|Reprise ·|Avant le début/.test(words), 'plus de vocabulaire interne');
+
+  // 6 ter. outils : roulettes, accordeur, ajout de temps
+  await p.setViewportSize({ width: 1180, height: 820 });
+  await p.click('#mwSvg', { position: { x: 120, y: 120 } });
+  check(await p.evaluate(() => !!metroT && !M.ramp), 'roulette du métronome : un tap démarre');
+  const b0 = await p.evaluate(() => MT.bpm);
+  await p.hover('#mwSvg'); await p.mouse.wheel(0, -100);
+  check(await p.evaluate(b => MT.bpm === b + 1 && M.bpm === b + 1, b0), 'roulette du métronome : le tempo change en direct');
+  await p.click('#mwSvg', { position: { x: 120, y: 120 } });
+  check(await p.evaluate(() => !metroT), 'roulette du métronome : un tap arrête');
+  await p.click('#ds-7');
+  check(await p.evaluate(() => drone && drone.slot === 'w' && drone.ton === 'Sol'), 'roulette du bourdon : un secteur lance le bourdon');
+  await p.evaluate(() => { tab = 'week'; render(); });
+  check(await p.evaluate(() => !!drone), 'le bourdon continue quand on change d’écran');
+  await p.click('#ds-7');
+  check(await p.evaluate(() => !drone), 'roulette du bourdon : un second clic l’arrête');
+  await p.click('#tuBtn'); await p.waitForTimeout(500);
+  check(await p.evaluate(() => !!TU), 'accordeur : écoute démarrée');
+  await p.click('#tuBtn'); await p.click('#tuClose');
+  check(await p.locator('#tl-tuner .tbody').isVisible() === false, 'accordeur : se ferme');
+  await p.click('#tuOpen');
+  await p.setViewportSize({ width: 820, height: 1180 });
+  check(await p.locator('#tl-metro').isVisible() === false && await p.locator('.ticon').count() === 3, 'portrait : trois icônes, outil replié');
+  await p.click('#ti-metro');
+  check(await p.locator('#tl-metro').isVisible(), 'portrait : l’icône ouvre l’outil');
+  await p.click('#ti-metro');
+  await p.evaluate(() => { tab = 'today'; selDate = addDays(state.weekStart, 2); render(); });
+  const m0 = await p.evaluate(() => planWeek()[2].minutes);
+  await p.evaluate(() => { tick('cible', selDate, true); tick('clot', selDate, true); });
+  await p.click('#addTime');
+  check(await p.evaluate(m => planWeek()[2].minutes === m + 15 && state.logs[selDate].done.cible === true && !state.logs[selDate].done.clot, m0), 'temps ajouté dans la journée : le travail déjà coché est gardé');
 
   // 7. impression, onglets
   await p.click('#tab-week'); await p.click('#printWeekBtn');
@@ -109,6 +149,20 @@ const check = (cond, msg) => { if (!cond) fails.push(msg); console.log((cond ? '
   check(after.ws === await p.evaluate(w => addDays(w, 7), ws0) || after.ws > ws0, 'assistant : semaine suivante démarrée');
   check(after.items.join(' / ') === 'Nouvelle pièce:Mesures 1 à 16|Mesures 17 à 32 / Étude:Étude entière / Étude n° 16:Étude entière', 'assistant : éléments mis à jour (' + after.items.join(' / ') + ')');
   check(after.how === 'Lent, sans vibrato' && after.tab === 'today', 'assistant : consigne reprise et retour au jour');
+
+  // 8 bis. saisie rapide : texte libre, préremplissage
+  await p.evaluate(() => { state.items[0].title = 'Pièce Matz'; state.items[1].title = 'Étude Dotzauer'; state.items[1].short = ''; state.items[0].short = ''; });
+  await p.click('#tab-week'); await p.click('#newWeekBtn');
+  check(await p.inputValue('#wz-et-0-l') === 'Étude entière', 'assistant : fiches préremplies avec la semaine en cours');
+  await p.fill('#wzText', 'Blabla sans rapport\nDotzauer lié par 12, croche = 104\nMatz mes. 5 à 12 à ♩ = 80 sans vibrato');
+  await p.click('#wzParse');
+  check(await p.inputValue('#wz-et-et') === '104', 'texte libre : tempo de l’étude reconnu');
+  check(await p.inputValue('#wz-et-es') === 'lie12', 'texte libre : étape « lié par 12 » reconnue');
+  check(await p.inputValue('#wz-' + (await p.evaluate(() => state.items[0].id)) + '-0-b') === '5 à 12', 'texte libre : mesures reconnues');
+  check((await p.inputValue('#wz-' + (await p.evaluate(() => state.items[0].id)) + '-0-tp')) === '♩ = 80', 'texte libre : tempo reconnu');
+  check((await p.innerText('.banner')).includes('Blabla'), 'texte libre : ligne non reconnue signalée');
+  await p.click('#wzOk');
+  check(await p.evaluate(() => state.items[1].tempo === 104 && state.items[1].stage === 'lie12' && state.items[0].passages[0].bars === '5 à 12'), 'texte libre : appliqué à la semaine');
 
   check(errs.length === 0, 'aucune erreur dans la console' + (errs.length ? ' : ' + errs.join(' | ') : ''));
   await browser.close(); server.close();

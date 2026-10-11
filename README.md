@@ -36,6 +36,7 @@ Rien n'est envoyé ailleurs. Sauvegarde et passage d'un appareil à l'autre : on
 | `js/week.js`, `js/stats.js`, `js/prog.js` | onglets Semaine, Suivi, Programme |
 | `js/wizard.js` | assistant « Préparer la semaine suivante » |
 | `js/main.js` | démarrage |
+| `js/tools.js` | panneau d’outils : accordeur, roulette du métronome, roulette du bourdon |
 | `tests/smoke.js` | test de bout en bout (Chromium) |
 
 Les scripts sont des scripts classiques qui partagent la portée globale : l'ordre de chargement
@@ -55,6 +56,10 @@ dans `index.html` compte (`main.js` en dernier).
   tranches de 5 min : 20 = révision d'un 2e élément, 25 = travail ciblé +5, 30 = jouer d'une traite, 35 = déchiffrage, 40 = intervalles chantés, 45 = 3e élément, 50 = enregistrement.
 - Lecture chantée : sur le passage principal la première fois qu'il est joué, sinon sur la liste
   de *passages à lire* (onglet Programme).
+
+## Apparences
+
+Dix apparences au choix dans Semaine > Réglages > Apparence (définies à la fin de `css/app.css`, attribut `data-look`).
 
 ## Tests
 

@@ -1,7 +1,7 @@
 /* Cache hors ligne. À chaque mise en ligne d'une nouvelle version, incrémenter V. */
-const V = 'cello-v4';
+const V = 'cello-v5';
 const FILES = ['./', 'index.html', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png',
-  'css/app.css', 'js/util.js', 'js/store.js', 'js/plan.js', 'js/audio.js', 'js/chrono.js', 'js/micro.js',
+  'css/app.css', 'js/util.js', 'js/store.js', 'js/plan.js', 'js/audio.js', 'js/chrono.js', 'js/tools.js', 'js/micro.js',
   'js/app.js', 'js/today.js', 'js/week.js', 'js/stats.js', 'js/prog.js', 'js/wizard.js', 'js/main.js'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(V).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));

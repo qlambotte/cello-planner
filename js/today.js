@@ -1,4 +1,24 @@
 /* ---------- aujourd’hui : séance du jour, blocs, bilan, impression ---------- */
+/* une séance = une suite de phases ; on en voit une à la fois. Phase 0 : aperçu et temps disponible. */
+let PH={date:null,i:0};
+const PHASE_NAMES={chant:'Oreille',lect:'Lecture chantée',cible:'Travail ciblé',rep:'Révision',dechiff:'Déchiffrage',continu:'En continu',enreg:'Enregistrement',repet:'Répétition',clot:'Bilan'};
+function phaseTitle(b){return b.type==='rep'&&b.it?PHASE_NAMES.rep+' · '+name(b.it):PHASE_NAMES[b.type]||b.type}
+function gotoPhase(i){PH.i=i;render();window.scrollTo(0,0)}
+function gotoBlock(bid){
+  if(!PH.date)return;
+  const idx=daysBetween(state.weekStart,PH.date);if(idx<0||idx>6)return;
+  const k=buildBlocks(planWeek()[idx]).findIndex(b=>b.id===bid);
+  if(k>=0&&tab==='today'){PH.i=k+1;render();window.scrollTo(0,0)}
+}
+/* ajouter du temps le même jour (ex. 15 min le matin, 15 min de plus le soir) */
+function addTime(date,v){
+  const idx=daysBetween(state.weekStart,date),P=planWeek()[idx],l=logOf(date);
+  if(!state.perDay)state.perDay={};
+  state.perDay[date]=P.minutes+v;
+  if(l.snap)l.snap.minutes=P.minutes+v;
+  delete l.done.clot;delete l.finished;recalcMins(date);
+  save();render();window.scrollTo(0,0);
+}
 function renderToday(){
   const plans=planWeek();
   if(!plans.length)return '<div class="empty"><p>Ajoute au moins un élément dans l’onglet Programme.</p><button class="btn" onclick="go(\'prog\')">Ouvrir le programme</button></div>';
@@ -12,14 +32,30 @@ function renderToday(){
   const P=plans[daysBetween(state.weekStart,date)];
   const log=(state.logs&&state.logs[date])||{};
   const blocks=buildBlocks(P),done=log.done||{};
-  const toLesson=daysBetween(date,end);
+  if(PH.date!==date){PH={date,i:0}}
+  const n=blocks.length,i=Math.max(0,Math.min(n,PH.i));PH.i=i;
   let h=banner+backupBanner();
-  h+='<div class="dayhead"><div><p class="eyebrow">Jour '+(P.k+1)+' sur 7 · '+(P.lesson?'jour de cours':toLesson===1?'cours demain':'cours dans '+toLesson+' jours')+'</p><h2>'+esc(fmtLong(date))+'</h2></div>';
-  h+='<div><p class="eyebrow" id="minlbl">Temps disponible</p><div class="chips" role="group" aria-labelledby="minlbl">'+[15,20,25,30,45,60].map(v=>'<button class="chip" id="min-'+v+'" aria-pressed="'+(P.minutes===v)+'" onclick="setMin(\''+date+'\','+v+')">'+v+' min</button>').join('')+'</div></div></div>';
-  h+='<div class="bar" aria-hidden="true">'+blocks.map(b=>'<span id="seg-'+b.id+'" class="'+(done[b.id]?'on':'')+'" style="flex:'+b.min+'">'+b.min+'</span>').join('')+'</div>';
+  h+='<div class="phbar" role="group" aria-label="Phases de la séance"><button class="seg'+(i===0?' cur':'')+'" id="seg-0" onclick="gotoPhase(0)">Aperçu</button>'
+    +blocks.map((b,k)=>'<button class="seg'+(done[b.id]?' on':'')+(i===k+1?' cur':'')+'" id="seg-'+b.id+'" style="flex:'+b.min+'" onclick="gotoPhase('+(k+1)+')" aria-label="'+esc(phaseTitle(b))+'">'+b.min+'</button>').join('')+'</div>';
+  h+='<div class="phase">';
+  if(i===0)h+=overviewHtml(P,blocks,done,date,log);
+  else h+='<p class="eyebrow">Phase '+i+' sur '+n+' · '+esc(fmtShort(date))+'</p><ol class="blocks">'+blockHtml(blocks[i-1],P,done,date)+'</ol>';
+  h+='</div>';
+  h+='<nav class="phnav" aria-label="Navigation entre les phases"><button class="arrow" id="phPrev" onclick="gotoPhase('+(i-1)+')"'+(i===0?' disabled':'')+' aria-label="Phase précédente">‹</button>'
+    +'<span class="phlbl">'+(i===0?'Aperçu de la séance':esc(phaseTitle(blocks[i-1])))+'</span>'
+    +'<button class="arrow" id="phNext" onclick="gotoPhase('+(i+1)+')"'+(i===n?' disabled':'')+' aria-label="Phase suivante">›</button></nav>';
+  return h;
+}
+function overviewHtml(P,blocks,done,date,log){
+  const end=addDays(state.weekStart,6),toLesson=daysBetween(date,end),total=blocks.reduce((a,b)=>a+b.min,0);
+  const doneMin=blocks.filter(b=>done[b.id]).reduce((a,b)=>a+b.min,0);
+  let h='<div class="dayhead"><div><p class="eyebrow">Jour '+(P.k+1)+' sur 7 · '+(P.lesson?'jour de cours':toLesson===1?'cours demain':'cours dans '+toLesson+' jours')+'</p><h2>'+esc(fmtLong(date))+'</h2></div></div>';
   h+=focusHtml(P);
-  h+='<div class="guide"><button class="btn" id="guideBtn" onclick="toggleGuided(\''+date+'\')">Démarrer la séance guidée</button><span class="sub">Les chronos s’enchaînent et chaque bloc est coché à la fin. L’écran reste allumé.</span></div>';
-  h+='<ol class="blocks">'+blocks.map(b=>blockHtml(b,P,done,date)).join('')+'</ol>';
+  h+='<ol class="plist">'+blocks.map((b,k)=>'<li><button class="prow'+(done[b.id]?' on':'')+'" id="pr-'+b.id+'" onclick="gotoPhase('+(k+1)+')"><span class="pn">'+(done[b.id]?'✓':(k+1))+'</span><span class="pt">'+esc(phaseTitle(b))+'</span><span class="pm">'+b.min+' min</span></button></li>').join('')+'</ol>';
+  h+='<p class="eyebrow" id="minlbl" style="margin-top:14px">Temps disponible</p><div class="chips" role="group" aria-labelledby="minlbl">'+[15,20,25,30,45,60].map(v=>'<button class="chip" id="min-'+v+'" aria-pressed="'+(P.minutes===v)+'" onclick="setMin(\''+date+'\','+v+')">'+v+' min</button>').join('')+'</div>';
+  h+='<div class="btnrow" style="margin-top:10px"><button class="btn ghost small" id="addTime" onclick="addTime(\''+date+'\',15)">+ 15 min plus tard dans la journée</button></div>';
+  if(doneMin)h+='<p class="sub" style="margin-top:8px">Déjà fait aujourd’hui : '+doneMin+' min sur '+total+'. Ajouter du temps garde ce qui est coché et ajoute des phases à la suite.</p>';
+  h+='<div class="guide" style="margin-top:14px"><button class="btn" id="guideBtn" onclick="toggleGuided(\''+date+'\')">Démarrer la séance guidée</button><span class="sub">Les chronos s’enchaînent, chaque phase est cochée à la fin. L’écran reste allumé.</span></div>';
   h+='<div style="margin-top:14px"><button class="btn ghost small" id="printDay" onclick="printDays([\''+date+'\'])">Imprimer la fiche du jour</button></div>';
   return h;
 }
@@ -45,6 +81,7 @@ window.addEventListener('afterprint',()=>{const pa=document.getElementById('prin
 function setMin(d,v){
   if(!state.perDay)state.perDay={};
   if(v===(state.defaultMinutes||15))delete state.perDay[d];else state.perDay[d]=v;
+  const sl=state.logs&&state.logs[d];if(sl&&sl.snap)sl.snap.minutes=v;
   resetChrono();save();render();
 }
 

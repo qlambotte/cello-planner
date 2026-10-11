@@ -27,7 +27,8 @@ function nextBlock(date,bid){
   const bl=blocksFor(date).blocks,l=(state.logs&&state.logs[date])||{},i=bl.findIndex(b=>b.id===bid);
   return bl.slice(i+1).find(b=>!(l.done&&l.done[b.id]))||null;
 }
-function scrollToEl(id){const e=document.getElementById(id);if(e)e.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'center'})}
+function scrollToEl(id){
+  if(id.indexOf('blk-')===0&&typeof gotoBlock==='function'){gotoBlock(id.slice(4));return}const e=document.getElementById(id);if(e)e.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'center'})}
 function tmDone(){
   const bid=TM.bid,date=TM.date;stopTick();TM.run=false;TM.left=0;chime();
   if(guided){

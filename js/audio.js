@@ -38,17 +38,22 @@ function stopDrone(){
   if(!drone)return;const c=actx,t=c.currentTime,d=drone;drone=null;
   try{const g=d.bus.out.gain;g.cancelScheduledValues(t);g.setValueAtTime(g.value,t);g.linearRampToValueAtTime(0,t+.6);d.voices.forEach(v=>v.o.stop(t+.7))}catch(e){}
   document.querySelectorAll('[data-drone]').forEach(b=>{b.textContent='▶ Bourdon'});
+  if(typeof paintTools==='function')paintTools();
 }
 function toggleDrone(slot){
   if(drone){const same=drone.slot===slot;stopDrone();if(same)return}
   const sel=document.getElementById('tonicSel-'+slot);if(!sel||!sel.value)return;
-  const fifth=document.getElementById('fifthChk-'+slot).checked,hi=document.getElementById('octSel-'+slot).value==='1';
-  const c=ctx(),bus=celloBus(c),f=midiFreq(36+PC[sel.value]+(hi?12:0));
+  startDrone(slot,sel.value,document.getElementById('octSel-'+slot).value==='1',document.getElementById('fifthChk-'+slot).checked);
+}
+function startDrone(slot,ton,hi,fifth){
+  if(drone)stopDrone();
+  const c=ctx(),bus=celloBus(c),f=midiFreq(36+PC[ton]+(hi?12:0));
   const voices=[celloVoice(c,f,bus.input,.45,-4),celloVoice(c,f,bus.input,.45,5),celloVoice(c,f*2,bus.input,.12,0)];
   if(fifth){const f5=f*Math.pow(2,7/12);voices.push(celloVoice(c,f5,bus.input,.3,-3),celloVoice(c,f5,bus.input,.3,4))}
   const t=c.currentTime;bus.out.gain.setValueAtTime(0,t);bus.out.gain.linearRampToValueAtTime(.55,t+.9);
-  drone={slot,bus,voices};
+  drone={slot,ton,bus,voices};
   const b=document.getElementById('droneBtn-'+slot);if(b)b.textContent='■ Arrêter';
+  if(typeof paintTools==='function')paintTools();
 }
 function redrone(slot){const l=document.getElementById('droneLbl-'+slot);if(l)l.textContent=droneLabel(slot);if(drone&&drone.slot===slot){stopDrone();toggleDrone(slot)}}
 function playMidi(m,dur){
@@ -77,6 +82,7 @@ function droneTools(slot,ton,extra){
 let metroT=null,metroUiT=null,M=null;
 function metroUI(){
   const e=document.getElementById('rampInfo');if(!M||!M.ramp)return;
+  if(typeof paintTools==='function')paintTools();
   if(e)e.textContent='Répétition '+(M.rep+1)+'/'+M.reps+' · croche = '+M.bpm;
   const b=document.getElementById('bpm');if(b)b.value=M.bpm;
 }
@@ -88,6 +94,7 @@ function stopMetro(){
     e.innerHTML=M.bpm!==M.start&&M.itemId?'Arrêté à croche = <strong>'+M.bpm+'</strong> <button class="btn ghost small" id="keepTempo" onclick="keepTempo(\''+M.itemId+'\','+M.bpm+')">Retenir ce tempo</button>':'';
   }
   M=null;
+  if(typeof paintTools==='function')paintTools();
 }
 function keepTempo(id,v){
   setTempo(id,String(v));const b=document.getElementById('bpm');if(b)b.value=v;
@@ -96,9 +103,12 @@ function keepTempo(id,v){
 function numVal(id,def){const e=document.getElementById(id);const v=e?+e.value:NaN;return isNaN(v)||v<=0?def:v}
 function toggleMetro(itemId){
   if(metroT){stopMetro();return}
-  const bpm0=Math.max(20,Math.min(260,numVal('bpm',60)));
-  const chk=document.getElementById('rampChk'),ramp=!!(chk&&chk.checked);
-  M={bpm:bpm0,start:bpm0,ramp,step:numVal('rampStep',4),reps:Math.max(1,numVal('rampReps',4)),per:Math.max(1,numVal('rampBeats',12)),cap:Math.min(260,numVal('rampMax',120)),beats:0,rep:0,itemId:itemId||null};
+  const chk=document.getElementById('rampChk');
+  startMetro({bpm:Math.max(20,Math.min(260,numVal('bpm',60))),ramp:!!(chk&&chk.checked),step:numVal('rampStep',4),reps:Math.max(1,numVal('rampReps',4)),per:Math.max(1,numVal('rampBeats',12)),cap:Math.min(260,numVal('rampMax',120)),itemId});
+}
+function startMetro(o){
+  if(metroT)stopMetro();
+  M={bpm:o.bpm,start:o.bpm,ramp:!!o.ramp,step:o.step||4,reps:o.reps||4,per:o.per||12,cap:o.cap||120,beats:0,rep:0,itemId:o.itemId||null};
   const c=ctx();let next=c.currentTime+.08;
   const click=(t,acc)=>{const o=c.createOscillator(),g=c.createGain();o.frequency.value=acc?1500:1000;
     g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.45,t+.002);g.gain.exponentialRampToValueAtTime(.0001,t+.04);
@@ -112,6 +122,7 @@ function toggleMetro(itemId){
   },25);
   metroUiT=setInterval(metroUI,150);metroUI();
   const btn=document.getElementById('metroBtn');if(btn)btn.textContent='■ Arrêter';
+  if(typeof paintTools==='function')paintTools();
 }
 function saveRamp(){
   const chk=document.getElementById('rampChk');
@@ -139,5 +150,5 @@ function setDiapason(v){
   state.diapason=+v;save();
   document.querySelectorAll('.diapSel').forEach(e=>{e.value=String(v)});
   const b=document.getElementById('refA');if(b)b.textContent='▶ La de référence ('+(state.diapason/2)+' Hz)';
-  if(drone)redrone(drone.slot);
+  if(drone){if(drone.slot==='w')startDrone('w',drone.ton,false,DW.fifth);else redrone(drone.slot)}
 }
