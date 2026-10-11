@@ -38,7 +38,7 @@ function toolsHtml(){
     +'<div class="tbody tuner"><div class="turead"><span class="tunote" id="tuNote">—</span><span class="tustr" id="tuStr">&nbsp;</span></div>'
     +'<div class="tugauge" aria-hidden="true"><span class="tuflat">♭</span><div class="needle"><span class="tuzone" id="tuZone"></span><b class="tick" style="left:25%"></b><b class="tick" style="left:75%"></b><i id="tuNeedle"></i></div><span class="tusharp">♯</span></div>'
     +'<div class="tucents" id="tuCents" aria-live="polite">Joue une note</div><div class="tuhz" id="tuHz">&nbsp;</div>'
-    +'<div class="tuctl"><button class="btn small" id="tuBtn" onclick="toggleTuner()">Écouter</button><button id="tuRef" class="btn ghost small refBtn" data-l="▶ Jouer un La" onclick="toggleRefTone()" title="La 220 Hz (corde à vide), d’après le diapason">▶ Jouer un La</button>'+diapHtml('diapSel-t')+'</div></div></section>'
+    +'<div class="tuctl"><button class="btn small" id="tuBtn" onclick="toggleTuner()">Écouter</button>'+diapHtml('diapSel-t')+'</div></div></section>'
     +'<section class="tool" data-tool="metro" id="tl-metro"><div class="thead"><h3><button class="topen" id="meOpen" onclick="toggleTool(\'metro\')" aria-label="Métronome : ouvrir ou fermer">Métronome</button></h3></div><div class="tbody wheel">'+metroSvg()+'</div></section>'
     +'<section class="tool" data-tool="drone" id="tl-drone"><div class="thead"><h3><button class="topen" id="drOpen" onclick="toggleTool(\'drone\')" aria-label="Bourdon : ouvrir ou fermer">Bourdon</button></h3></div><div class="tbody wheel">'+droneSvg()+'</div></section>';
 }
@@ -169,10 +169,17 @@ function paintTools(){
   const ti=document.getElementById('ti-metro');if(ti)ti.classList.toggle('live',on);
   const td=document.getElementById('ti-drone');if(td)td.classList.toggle('live',!!drone);
   const tt=document.getElementById('ti-tuner');if(tt)tt.classList.toggle('live',!!TU);
+  setToolsH();
 }
+/* en portrait, les onglets restent collés juste sous le panneau d'outils */
+function setToolsH(){
+  const el=document.getElementById('tools');if(!el)return;
+  const h=window.matchMedia('(orientation:portrait)').matches?el.offsetHeight:0;
+  document.documentElement.style.setProperty('--toolsH',h+'px');
+}
+window.addEventListener('resize',()=>setToolsH());
 /* après un rendu de #app, les boutons de phase retrouvent l'état réel du son */
 function syncAudioUi(){
-  if(typeof REFTONE!=='undefined'&&REFTONE)document.querySelectorAll('.refBtn').forEach(b=>{b.textContent='■ Arrêter le La'});
   if(drone&&drone.slot!=='w'){const b=document.getElementById('droneBtn-'+drone.slot);if(b)b.textContent='■ Arrêter'}
   if(metroT){const b=document.getElementById('metroBtn');if(b)b.textContent='■ Arrêter'}
   paintTools();

@@ -112,18 +112,6 @@ function playMidi(m,dur,delay,opt){
   tn.stopAt(dur,Math.min(.45,.15+dur*.12));
   return {stop(){tn.stop(.1)}};
 }
-/* La de référence tenu, sans vibrato : un second appui l'arrête */
-let REFTONE=null,REFTIMER=null;
-function stopRefTone(){
-  if(!REFTONE)return;REFTONE.stop(.35);REFTONE=null;clearTimeout(REFTIMER);
-  document.querySelectorAll('.refBtn').forEach(b=>{b.textContent=b.dataset.l});
-}
-function toggleRefTone(){
-  if(REFTONE){stopRefTone();return}
-  REFTONE=startTone(57,{vib:false,noise:false,attack:.25,level:.42,room:.12});
-  REFTIMER=setTimeout(stopRefTone,30000);
-  document.querySelectorAll('.refBtn').forEach(b=>{b.textContent='■ Arrêter le La'});
-}
 function droneLabel(slot){
   const t=document.getElementById('tonicSel-'+slot),f=document.getElementById('extSel-'+slot),o=document.getElementById('octSel-'+slot);
   if(!t)return '';
