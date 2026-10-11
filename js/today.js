@@ -116,6 +116,7 @@ function blockHtml(b,P,done,date){
     body='<p>Chante la gamme en montant puis en descendant, en nommant les notes. Joue-la ensuite et ajuste chaque note contre le bourdon. Termine par l’arpège (1-3-5-8).</p>'
       +(it&&it.key?'<p class="sub">Tonalité : '+esc(it.key)+' ('+esc(name(it))+')</p>':'')
       +(b.min>=8?'<p>Ajoute les intervalles : depuis la tonique, chante une tierce, une quinte, une octave, puis vérifie sur l’instrument.</p>':'')
+      +scaleHtml(ton,it&&it.key)
       +(PRINT?'<p>Bourdon sur <strong>'+esc(ton)+'</strong></p>'
         :droneTools('a',ton,''));
   }else if(b.type==='lect'){

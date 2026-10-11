@@ -316,3 +316,8 @@ html[data-look="contraste"] .score,html[data-look="noirblanc"] .score{border-col
 .impbox{border-top:1px solid var(--line);margin-top:12px;padding-top:12px}
 .implist{list-style:none;padding:0;margin:8px 0 0;display:flex;flex-direction:column;gap:6px}
 .implist li{display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--surface)}
+
+.scbox{margin-block:10px}
+.score .nt.ok .nh{fill:var(--ok);stroke:var(--ok)}.score .nt.ok .nh.o{fill:#fff;stroke:var(--ok)}.score .nt.ok .st{stroke:var(--ok)}
+.score .nt.near .nh{fill:#C9A227;stroke:#C9A227}.score .nt.near .nh.o{fill:#fff;stroke:#C9A227}.score .nt.near .st{stroke:#C9A227}
+.score .nt.ko .nh{fill:#B3261E;stroke:#B3261E}.score .nt.ko .nh.o{fill:#fff;stroke:#B3261E}.score .nt.ko .st{stroke:#B3261E}

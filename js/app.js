@@ -13,8 +13,10 @@ function render(){
   h+=tab==='today'?renderToday():tab==='week'?renderWeek():tab==='sing'?renderSing():tab==='stats'?renderStats():tab==='wizard'?renderWizard():renderProg();
   app.innerHTML=h;
   if(tab!=='sing')stopSeq();
+  if(typeof scStop==='function'&&!document.getElementById('scBox'))scStop();
   paintTimer();paintGuided();syncAudioUi();
   if(tab==='sing')drawSing();
+  if(tab==='today')drawScale();
 }
 function go(t){tab=t;pendingDel=null;render();window.scrollTo(0,0)}
 function startBlank(){state=blankState();save();render()}

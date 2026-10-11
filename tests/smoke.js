@@ -65,8 +65,39 @@ const check = (cond, msg) => { if (!cond) fails.push(msg); console.log((cond ? '
   await p.selectOption('#pickSel', 'auto');
   check(await p.evaluate(a => planWeek()[3].pr.id === a && !planWeek()[3].chosen, pk.auto), 'retour au choix automatique');
 
+  // 3 ter. gamme et arpège : portée, écoute, contrôle au micro
+  await p.evaluate(() => { tab = 'today'; selDate = addDays(state.weekStart, 1); render(); gotoBlock('chant'); });
+  check(await p.locator('#scScore svg.score').count() === 1 && (await p.innerText('#scTitle')).startsWith('Gamme de'), 'gamme : portée affichée avec son titre');
+  await p.click('#scK-arp');
+  check((await p.innerText('#scTitle')).startsWith('Arpège de') && await p.locator('#scScore .nt').count() === 7, 'arpège : 7 notes (1-3-5-8-5-3-1)');
+  await p.click('#scM-min'); await p.click('#scK-scale');
+  check(await p.locator('#scScore .nt').count() === 15 && (await p.innerText('#scTitle')).includes('mineur'), 'gamme mineure : 15 notes');
+  const sc144 = await p.evaluate(() => { try { let n = 0; for (const ton of TONICS) for (const md of ['maj', 'min']) for (const kd of ['scale', 'arp']) for (const cl of ['bass', 'tenor', 'treble']) { state.scaleUi = { kind: kd, mode: md }; state.chant.clef = cl; SC.cfg = { ton, key: '' }; drawScore(scBuild(), { width: 600, lines: 2, labels: true }); n++ } state.scaleUi = { kind: 'scale', mode: 'maj' }; state.chant.clef = 'bass'; return n } catch (e) { return e.message } });
+  check(sc144 === 144, 'gamme/arpège : toutes les toniques, modes et clés se gravent (' + sc144 + ')');
+  await p.evaluate(() => { tab = 'today'; render(); gotoBlock('chant'); });
+  await p.click('#scPlay');
+  check(await p.evaluate(() => SC.playing && SC.timers.length > 10), 'gamme : écoute lancée');
+  await p.click('#scPlay');
+  await p.click('#scSing'); await p.waitForTimeout(400);
+  check(await p.evaluate(() => !!SC.chk), 'contrôle au micro : démarré');
+  await p.evaluate(() => { window.__t = 0; window.__dp = detectPitch; window.detectPitch = () => midiFreq(SC.model.notes[Math.min(SC.chk ? SC.chk.i : 0, SC.model.notes.length - 1)].midi + 12 + window.__t / 100); });
+  await p.waitForFunction(() => !SC.chk, null, { timeout: 20000 });
+  const r1 = await p.evaluate(() => ({ res: SC.res.join(','), msg: SC.msg }));
+  check(r1.res.split(',').every(x => x === 'ok') && /15 notes justes sur 15/.test(r1.msg), 'contrôle au micro : gamme chantée juste (à l’octave près) validée (' + r1.msg + ')');
+  check(await p.locator('#scScore .nt.ok').count() === 15, 'contrôle au micro : notes justes colorées sur la portée');
+  await p.click('#scSing'); await p.waitForTimeout(300);
+  await p.evaluate(() => { window.__t = 40; });
+  await p.waitForTimeout(1200);
+  check(await p.evaluate(() => SC.chk && SC.chk.i === 0), 'contrôle au micro : une note trop haute de 40 cents ne passe pas');
+  check((await p.innerText('#scCents')).includes('trop haut'), 'contrôle au micro : sens de la correction indiqué');
+  await p.click('#scSkip');
+  check(await p.evaluate(() => SC.res[0] === 'ko' && SC.chk.i === 1), 'contrôle au micro : « Passer cette note »');
+  await p.click('#scSing');
+  await p.evaluate(() => { window.detectPitch = window.__dp; });
+  await p.evaluate(() => { tab = 'today'; render(); });
+
   // 4. chrono et séance guidée
-  await p.evaluate(() => openDay(addDays(state.weekStart, 1)));
+  await p.evaluate(() => { openDay(addDays(state.weekStart, 1)); gotoPhase(0); });
   check(await p.locator('.prow').count() === 6, 'aperçu : une ligne par phase');
   await p.evaluate(() => gotoBlock('chant'));
   check(await p.locator('.chrono').count() === 1 && await p.locator('.phase .block').count() === 1, 'une seule phase affichée, avec son chrono');

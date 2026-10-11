@@ -1,4 +1,4 @@
-const VERSION='v11';
+const VERSION='v12';
 /* ---------- utilitaires ---------- */
 const LS_KEY='cello-planner-v1';
 const pad=n=>String(n).padStart(2,'0');

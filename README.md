@@ -77,3 +77,7 @@ Limites : seule la première voix de la partie choisie est lue (accords : la not
 ## Son et outils (v9)
 
 Le timbre de violoncelle (notes de la lecture chantée, La de référence) est synthétisé avec un spectre riche, des résonances de caisse, un bruit d'archet discret, un vibrato qui s'installe sur les notes longues et une petite réverbération. L'accordeur ne joue plus de La (le diapason reste réglable). En portrait, les onglets restent collés sous le panneau d'outils. Le bourdon est une voix unique, exacte, sans battements parasites : tonique seule, avec la quinte pure (3:2) ou avec l'octave (le centre de la roulette passe de l'un à l'autre). Taper sur le nom d'un outil l'ouvre ou le ferme (et l'arrête). Dans « Travail ciblé », le menu « Morceau à travailler » permet de remplacer le choix automatique pour la journée.
+
+## Gamme et arpège (v12)
+
+Dans la phase « Oreille », la gamme ou l'arpège 1-3-5-8 est écrit sur une portée, dans la tonalité du morceau travaillé (majeur ou mineur mélodique, au choix). « Écouter » la joue avec surlignage des notes. « Contrôler mon chant » suit la voix au micro, note par note, à l'octave près : la note passe quand elle est tenue une demi-seconde à ± 25 cents, puis elle se colore (vert ± 15 cents, jaune proche, rouge passée avec « Passer cette note »). Un bilan s'affiche à la fin.
