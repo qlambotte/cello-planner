@@ -1,5 +1,5 @@
 /* Cache hors ligne. À chaque mise en ligne d'une nouvelle version, incrémenter V. */
-const V = 'cello-v12';
+const V = 'cello-v13';
 const FILES = ['./', 'index.html', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png',
   'css/app.css', 'js/util.js', 'js/store.js', 'js/plan.js', 'js/audio.js', 'js/chrono.js', 'js/tools.js', 'js/micro.js',
   'js/glyphs.js', 'js/engrave.js', 'js/chant-data.js', 'js/chant.js', 'js/import.js', 'js/scale.js', 'js/app.js', 'js/today.js', 'js/week.js', 'js/stats.js', 'js/prog.js', 'js/wizard.js', 'js/main.js'];

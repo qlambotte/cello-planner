@@ -1,15 +1,31 @@
 /* ---------- gamme et arpège : portée, écoute, contrôle de justesse au micro (voix) ---------- */
 const SC={cfg:{ton:'Sol',key:''},model:null,chk:null,timers:[],voices:[],res:null,msg:''};
-const SCALES={
-  maj:{scale:{k:'C',mode:'maj',bars:['C D E F','G A B c','B A G F','E D C2']},arp:{k:'C',mode:'maj',bars:['C E G c','G E C2']}},
-  min:{scale:{k:'A',mode:'min',bars:['A B c d','e ^f ^g a','g f e d','c B A2']},arp:{k:'A',mode:'min',bars:['A c e a','e c A2']}}
+/* notes de la gamme et de l'arpège (ABC, en do majeur / la mineur), transposées ensuite dans la tonalité voulue */
+const SC_SEQ={
+  maj:{scale:'C D E F G A B c B A G F E D C'.split(' '),arp:'C E G c G E C'.split(' ')},
+  min:{scale:'A B c d e ^f ^g a =g =f e d c B A'.split(' '),arp:'A c e a e c A'.split(' ')}
 };
-function scUi(){const u=state.scaleUi=state.scaleUi||{};if(!u.kind)u.kind='scale';if(!u.mode)u.mode='auto';return u}
+const SC_RHY={q:['Noires','1/4',4],e:['Croches','1/8',8],s:['Doubles croches','1/16',16]};   // nom, unité, unités par mesure 4/4
+function scBars(mode,kind,rhy){
+  let seq=SC_SEQ[mode][kind].slice(),dur=seq.map(()=>1);
+  if(kind==='arp'&&rhy==='s'){const s6=seq.slice(0,6);dur=s6.map(()=>1).concat(s6.map(()=>1),[4]);seq=s6.concat(s6,[seq[6]])}
+  else dur[dur.length-1]=2;
+  const per=SC_RHY[rhy][2],bars=[];let cur=[],acc=0,mem={};
+  seq.forEach((t,i)=>{
+    const m=t.match(/^(\^|_|=)?([A-Ga-g])$/),L=m[2];
+    if(m[1]==='='&&!mem[L])t=L;                      // pas de bécarre inutile
+    if(m[1])mem[L]=m[1];
+    cur.push(t+(dur[i]>1?dur[i]:''));acc+=dur[i];
+    if(acc>=per){bars.push(cur.join(' '));cur=[];acc=0;mem={}}
+  });
+  if(cur.length)bars.push(cur.join(' '));
+  return bars;
+}
+function scUi(){const u=state.scaleUi=state.scaleUi||{};if(!u.kind)u.kind='scale';if(!u.mode)u.mode='auto';if(!SC_RHY[u.rhy])u.rhy='e';return u}
 const scMinor=()=>{const u=scUi();return u.mode==='min'||(u.mode==='auto'&&/min/i.test(SC.cfg.key||''))};
 function scBuild(){
   const u=scUi(),mi=scMinor(),pc=PC[SC.cfg.ton]!==undefined?PC[SC.cfg.ton]:7;
-  const def=SCALES[mi?'min':'maj'][u.kind];
-  const piece={id:'sc',t:'',c:'',k:def.k,mode:def.mode,m:'4/4',l:'1/4',lev:1,bars:def.bars};
+  const piece={id:'sc',t:'',c:'',k:mi?'A':'C',mode:mi?'min':'maj',m:'4/4',l:SC_RHY[u.rhy][1],lev:1,bars:scBars(mi?'min':'maj',u.kind,u.rhy)};
   const sp=(mi?SP_MIN:SP_MAJ)[pc];
   SC.model=buildModel(piece,0,piece.bars.length,{letter:sp[0],acc:sp[1],pc},CS().clef);
   SC.title=(u.kind==='scale'?'Gamme de ':'Arpège de ')+modeName(pc,mi);
@@ -24,6 +40,7 @@ function scaleHtml(ton,key){
   return '<div class="scbox" id="scBox"><div class="stage" role="group" aria-label="Exercice">'
     +chip('scK-scale','Gamme',u.kind==='scale',"scSet('kind','scale')")+chip('scK-arp','Arpège 1-3-5-8',u.kind==='arp',"scSet('kind','arp')")
     +chip('scM-maj','Majeur',!mi,"scSet('mode','maj')")+chip('scM-min','Mineur',mi,"scSet('mode','min')")+'</div>'
+    +'<div class="stage" role="group" aria-label="Valeur des notes">'+Object.keys(SC_RHY).map(k=>chip('scR-'+k,SC_RHY[k][0],u.rhy===k,"scSet('rhy','"+k+"')")).join('')+'</div>'
     +'<p class="sub" id="scTitle">'+esc(SC.title)+'</p><div id="scScore" class="chscore"></div>'
     +'<div class="btnrow"><button class="btn small" id="scPlay" onclick="scPlay()">▶ Écouter</button>'
     +'<button class="btn ghost small" id="scTon" onclick="scTonic()">▶ Tonique</button>'

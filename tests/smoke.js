@@ -68,12 +68,17 @@ const check = (cond, msg) => { if (!cond) fails.push(msg); console.log((cond ? '
   // 3 ter. gamme et arpège : portée, écoute, contrôle au micro
   await p.evaluate(() => { tab = 'today'; selDate = addDays(state.weekStart, 1); render(); gotoBlock('chant'); });
   check(await p.locator('#scScore svg.score').count() === 1 && (await p.innerText('#scTitle')).startsWith('Gamme de'), 'gamme : portée affichée avec son titre');
-  await p.click('#scK-arp');
+  check(await p.evaluate(() => SC.model.notes[0].dur === 1 / 8), 'gamme : croches par défaut');
+  await p.click('#scR-s');
+  check(await p.evaluate(() => SC.model.notes[0].dur === 1 / 16) && await p.locator('#scScore .nt').count() === 15, 'gamme en doubles croches');
+  await p.click('#scR-q');
+  check(await p.evaluate(() => SC.model.bars.length === 4), 'gamme en noires : 4 mesures');
+  await p.click('#scR-e'); await p.click('#scK-arp');
   check((await p.innerText('#scTitle')).startsWith('Arpège de') && await p.locator('#scScore .nt').count() === 7, 'arpège : 7 notes (1-3-5-8-5-3-1)');
   await p.click('#scM-min'); await p.click('#scK-scale');
   check(await p.locator('#scScore .nt').count() === 15 && (await p.innerText('#scTitle')).includes('mineur'), 'gamme mineure : 15 notes');
-  const sc144 = await p.evaluate(() => { try { let n = 0; for (const ton of TONICS) for (const md of ['maj', 'min']) for (const kd of ['scale', 'arp']) for (const cl of ['bass', 'tenor', 'treble']) { state.scaleUi = { kind: kd, mode: md }; state.chant.clef = cl; SC.cfg = { ton, key: '' }; drawScore(scBuild(), { width: 600, lines: 2, labels: true }); n++ } state.scaleUi = { kind: 'scale', mode: 'maj' }; state.chant.clef = 'bass'; return n } catch (e) { return e.message } });
-  check(sc144 === 144, 'gamme/arpège : toutes les toniques, modes et clés se gravent (' + sc144 + ')');
+  const sc144 = await p.evaluate(() => { try { let n = 0; for (const ton of TONICS) for (const md of ['maj', 'min']) for (const kd of ['scale', 'arp']) for (const rh of ['q', 'e', 's']) for (const cl of ['bass', 'tenor', 'treble']) { state.scaleUi = { kind: kd, mode: md, rhy: rh }; state.chant.clef = cl; SC.cfg = { ton, key: '' }; drawScore(scBuild(), { width: 600, lines: 2, labels: true }); n++ } state.scaleUi = { kind: 'scale', mode: 'maj', rhy: 'e' }; state.chant.clef = 'bass'; return n } catch (e) { return e.message } });
+  check(sc144 === 432, 'gamme/arpège : toutes les toniques, modes et clés se gravent (' + sc144 + ')');
   await p.evaluate(() => { tab = 'today'; render(); gotoBlock('chant'); });
   await p.click('#scPlay');
   check(await p.evaluate(() => SC.playing && SC.timers.length > 10), 'gamme : écoute lancée');
