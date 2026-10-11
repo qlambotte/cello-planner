@@ -1,3 +1,4 @@
+const VERSION='v11';
 /* ---------- utilitaires ---------- */
 const LS_KEY='cello-planner-v1';
 const pad=n=>String(n).padStart(2,'0');
@@ -14,3 +15,13 @@ function lastWednesday(s){const d=parse(s);while(d.getDay()!==3)d.setDate(d.getD
 const TONICS=['Do','Do♯','Ré','Mi♭','Mi','Fa','Fa♯','Sol','La♭','La','Si♭','Si'];
 const PC={'Do':0,'Do♯':1,'Ré':2,'Mi♭':3,'Mi':4,'Fa':5,'Fa♯':6,'Sol':7,'La♭':8,'La':9,'Si♭':10,'Si':11};
 const KINDS={piece:'Pièce',etude:'Étude',methode:'Méthode'};
+
+/* apparences : réglage dans Semaine > Réglages */
+const LOOKS=[['','Automatique (clair ou sombre selon l’appareil)'],['papier','Papier chaud'],['nuit','Nuit de concert'],['bois','Bois de cello'],['minimal','Minimal clair'],['contraste','Contraste élevé'],['foret','Forêt'],['arrondi','Doux arrondi'],['ardoise','Ardoise'],['aube','Aube'],['noirblanc','Noir et blanc imprimé']];
+function applyLook(){
+  const v=(typeof state!=='undefined'&&state&&state.look)||'',r=document.documentElement;
+  if(v&&LOOKS.some(l=>l[0]===v))r.dataset.look=v;else delete r.dataset.look;
+  const m=document.querySelector('meta[name="theme-color"]');
+  if(m)requestAnimationFrame(()=>{m.content=getComputedStyle(r).getPropertyValue('--bg').trim()||'#1D5E57'});
+}
+function setLook(v){state.look=v;save();applyLook()}

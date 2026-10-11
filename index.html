@@ -10,6 +10,12 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <title>Planner violoncelle</title>
 <link rel="stylesheet" href="css/app.css">
+<script>
+/* bandeau d'erreur : si quelque chose casse, on le voit au lieu d'un bouton qui ne répond plus */
+(function(){function show(m){try{var d=document.getElementById('errbar');if(!d){d=document.createElement('div');d.id='errbar';d.setAttribute('role','alert');d.style.cssText='position:fixed;left:0;right:0;bottom:0;z-index:99;background:#8a1c1c;color:#fff;padding:8px 12px;font:13px/1.3 system-ui;max-height:30vh;overflow:auto';d.onclick=function(){d.remove()};document.body.appendChild(d)}d.textContent='Erreur : '+m+' (touche pour fermer)'}catch(e){}}
+window.addEventListener('error',function(e){show((e.message||'inconnue')+(e.filename?' — '+String(e.filename).split('/').pop()+':'+e.lineno:''))});
+window.addEventListener('unhandledrejection',function(e){show(String(e.reason&&e.reason.message||e.reason))})})();
+</script>
 <script src="js/util.js" defer></script>
 <script src="js/store.js" defer></script>
 <script src="js/plan.js" defer></script>

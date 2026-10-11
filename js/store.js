@@ -12,7 +12,7 @@ function normalize(d){
   d.items.forEach(i=>{i.passages=Array.isArray(i.passages)&&i.passages.length?i.passages:[newPass()]});
   return d;
 }
-function setSync(t){syncMsg=t;const e=document.getElementById('sync');if(e)e.textContent=t}
+function setSync(t){syncMsg=t;const e=document.getElementById('sync');if(e)e.textContent=t+' · '+VERSION}
 function save(){
   try{localStorage.setItem(LS_KEY,JSON.stringify(state));setSync('Enregistré sur cet appareil')}
   catch(e){setSync('Stockage du navigateur indisponible : exporte tes données')}
@@ -21,7 +21,7 @@ function init(){
   try{const s=localStorage.getItem(LS_KEY);state=s?JSON.parse(s):null}catch(e){state=null}
   if(state&&!Array.isArray(state.items))state=null;
   if(state)normalize(state);
-  ready=true;initTools();setSync(state?'Enregistré sur cet appareil':'');
+  ready=true;applyLook();initTools();setSync(state?'Enregistré sur cet appareil':'');
   try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
   if('serviceWorker' in navigator&&/^https?:/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
   render();
@@ -47,7 +47,7 @@ function onImport(inp){
   };
   r.readAsText(f);inp.value='';
 }
-function confirmImport(){state=pendingImport;pendingImport=null;selDate=null;save();render();window.scrollTo(0,0)}
+function confirmImport(){state=pendingImport;pendingImport=null;selDate=null;save();applyLook();render();window.scrollTo(0,0)}
 function cancelImport(){pendingImport=null;render()}
 function backupBanner(){
   if(!state)return '';
