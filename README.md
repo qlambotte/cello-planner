@@ -36,7 +36,6 @@ Rien n'est envoyé ailleurs. Sauvegarde et passage d'un appareil à l'autre : on
 | `js/week.js`, `js/stats.js`, `js/prog.js` | onglets Semaine, Suivi, Programme |
 | `js/wizard.js` | assistant « Préparer la semaine suivante » |
 | `js/main.js` | démarrage |
-| `js/tools.js` | panneau d’outils : accordeur, roulette du métronome, roulette du bourdon |
 | `tests/smoke.js` | test de bout en bout (Chromium) |
 
 Les scripts sont des scripts classiques qui partagent la portée globale : l'ordre de chargement
@@ -57,9 +56,9 @@ dans `index.html` compte (`main.js` en dernier).
 - Lecture chantée : sur le passage principal la première fois qu'il est joué, sinon sur la liste
   de *passages à lire* (onglet Programme).
 
-## Apparences
+## Lecture chantée
 
-Dix apparences au choix dans Semaine > Réglages > Apparence (définies à la fin de `css/app.css`, attribut `data-look`).
+Onglet « Lecture chantée » : exercices sans instrument (lire, oreille, degrés), par niveau (1 à 4), en clé de fa, d'ut 4e ou de sol, dans un ton choisi ou aléatoire. Les extraits sont dans `js/chant-data.js` (notation ABC simplifiée, une mesure par élément, sans reprise) ; `js/engrave.js` lit, transpose et dessine la partition en SVG, sans bibliothèque. Les contours des clés et des altérations viennent de GNU FreeSerif (GPL avec exception police). Pour ajouter un extrait, copier une entrée de `CHANT` ; `npm test` vérifie que chaque extrait se grave dans les trois clés et les douze tons.
 
 ## Tests
 
@@ -68,3 +67,9 @@ npm install
 npx playwright install chromium
 npm test
 ```
+
+## Ajouter une œuvre à la lecture chantée
+
+Dans le mode « Lecture chantée », le volet « Ajouter une œuvre » accepte les fichiers MuseScore (`.mscz`, `.mscx`) et MusicXML (`.musicxml`, `.xml`, `.mxl`). Tu peux corriger le titre, le compositeur, le mode et le niveau, et vérifier l'aperçu avant d'ajouter. L'œuvre est gardée dans l'appareil (et dans l'export JSON) et entre dans le tirage comme les autres, dans tous les tons et toutes les clés.
+
+Limites : seule la première voix de la partie choisie est lue (accords : la note la plus haute), les reprises ne sont pas dépliées, les changements de métrique en cours de pièce ne sont pas gérés, et les triolets sont approximatifs. Si un fichier MuseScore échoue, l'exporter en MusicXML (Fichier > Exporter) est la solution de secours. Les fichiers d'essai sont dans `tests/fix/`.

@@ -9,6 +9,7 @@ const server = http.createServer((q, s) => {
   fs.readFile(f, (e, d) => { if (e) { s.writeHead(404); s.end(); return; } s.writeHead(200, { 'Content-Type': TYPES[path.extname(f)] || 'application/octet-stream' }); s.end(d); });
 });
 const fails = [];
+const CHANT_N = 18;
 const check = (cond, msg) => { if (!cond) fails.push(msg); console.log((cond ? 'ok   ' : 'ÉCHEC ') + msg); };
 
 (async () => {
@@ -64,7 +65,13 @@ const check = (cond, msg) => { if (!cond) fails.push(msg); console.log((cond ? '
   await p.click('#guideBtn');
   await p.evaluate(() => { TM.end = Date.now() + 200; });
   await p.waitForTimeout(800);
-  check(await p.evaluate(() => state.logs[addDays(state.weekStart, 1)].done.chant === true && TM && TM.bid) === 'lect' && await p.locator('#blk-lect').count() === 1, 'séance guidée : phase cochée puis phase suivante affichée et lancée');
+  const over = await p.evaluate(() => ({ done: state.logs[addDays(state.weekStart, 1)].done.chant === true, bid: TM && TM.bid, run: TM && TM.run, over: TM && TM.over }));
+  check(over.done && over.bid === 'chant' && over.run && over.over, 'fin de phase : bip, phase cochée, le chrono continue de tourner');
+  await p.evaluate(() => { TM.end = Date.now() - 65000; });
+  await p.waitForTimeout(500);
+  check(/^\+1:0\d$/.test(await p.innerText('#tm-chant')) || /^[⏸▶] \+1:0\d$/.test(await p.innerText('#tm-chant')), 'temps dépassé affiché en « + m:ss »');
+  await p.click('#phNext');
+  check(await p.evaluate(() => TM && TM.bid) === 'lect' && await p.locator('#blk-lect').count() === 1, 'séance guidée : passer à la phase suivante arrête l’ancien chrono et lance le nouveau');
   await p.evaluate(() => resetChrono());
 
   // 5. son : bourdon, note de départ, diapason ; changer d'onglet du navigateur ne coupe pas le bourdon
@@ -115,6 +122,12 @@ const check = (cond, msg) => { if (!cond) fails.push(msg); console.log((cond ? '
   check(await p.evaluate(() => !drone), 'roulette du bourdon : un second clic l’arrête');
   await p.click('#tuBtn'); await p.waitForTimeout(500);
   check(await p.evaluate(() => !!TU), 'accordeur : écoute démarrée');
+  const pi = await p.evaluate(() => { state.tolerance = 5; paintTools(); showPitch(222); return [document.getElementById('tuNote').textContent, document.getElementById('tuCents').textContent, document.getElementById('tuStr').textContent]; });
+  check(pi[0] === 'La3' && /8 cents trop haut/.test(pi[1]) && /La/.test(pi[2]), 'accordeur : note, écart et sens de la correction (' + pi.join(' | ') + ')');
+  const pj = await p.evaluate(() => { showPitch(A4() / 2); return document.getElementById('tuCents').textContent; });
+  check(/^Juste/.test(pj), 'accordeur : « Juste » dans la zone verte');
+  const pz = await p.evaluate(() => { state.tolerance = 10; paintTools(); showPitch(222); return [document.getElementById('tuCents').textContent, document.getElementById('tuZone').style.width]; });
+  check(/^Juste/.test(pz[0]) && pz[1] === '20%', 'accordeur : la tolérance paramétrable déplace la zone verte (± 10 cents → 20 % de la jauge)');
   await p.click('#tuBtn'); await p.click('#tuClose');
   check(await p.locator('#tl-tuner .tbody').isVisible() === false, 'accordeur : se ferme');
   await p.click('#tuOpen');
@@ -128,6 +141,73 @@ const check = (cond, msg) => { if (!cond) fails.push(msg); console.log((cond ? '
   await p.evaluate(() => { tick('cible', selDate, true); tick('clot', selDate, true); });
   await p.click('#addTime');
   check(await p.evaluate(m => planWeek()[2].minutes === m + 15 && state.logs[selDate].done.cible === true && !state.logs[selDate].done.clot, m0), 'temps ajouté dans la journée : le travail déjà coché est gardé');
+
+  // 6 quater. apparences
+  await p.evaluate(() => { tab = 'week'; render(); });
+  for (const k of ['papier', 'nuit', 'bois', 'minimal', 'contraste', 'foret', 'arrondi', 'ardoise', 'aube', 'noirblanc', '']) {
+    await p.selectOption('#lookSel', k);
+    check(await p.evaluate(k => (document.documentElement.dataset.look || '') === k && (state.look || '') === k, k), 'apparence « ' + (k || 'automatique') + ' » appliquée');
+  }
+  await p.evaluate(() => { tab = 'today'; selDate = addDays(state.weekStart, 1); render(); });
+
+  // 6 quinquies. lecture chantée
+  const chk = await p.evaluate(() => {
+    let n = 0, bad = [];
+    for (const piece of CHANT) for (const clef of ['bass', 'tenor', 'treble']) for (let pc = 0; pc < 12; pc++) {
+      const sp = (piece.mode === 'min' ? SP_MIN : SP_MAJ)[pc], b = Math.min(piece.bars.length, 4);
+      try {
+        const m = buildModel(piece, 0, b, { letter: sp[0], acc: sp[1], pc }, clef), svg = drawScore(m, { width: 700, lines: 2, labels: true });
+        const lo = Math.min(...m.notes.map(x => x.midi)), hi = Math.max(...m.notes.map(x => x.midi));
+        if (svg.length < 500 || m.notes.some(x => Math.abs(x.acc) > 2)) bad.push(piece.id + clef + pc);
+        n++;
+      } catch (e) { bad.push(piece.id + clef + pc + ':' + e.message); }
+    }
+    return { n, bad: bad.slice(0, 5) };
+  });
+  check(chk.n === CHANT_N * 36 && chk.bad.length === 0, 'tous les extraits se gravent dans les 3 clés et les 12 tons (' + chk.n + ' essais' + (chk.bad.length ? ' ; échecs : ' + chk.bad.join(' ') : '') + ')');
+  const pool = await p.evaluate(() => { const r = {}; for (const x of [2, 4, 8]) { CS().x = x; r[x] = [1, 2, 3, 4].map(l => { CS().lev = l; return singPool().length; }); } CS().x = 4; CS().lev = 1; return r; });
+  check(pool[2].reduce((a, b) => a + b, 0) >= 60 && pool[4].reduce((a, b) => a + b, 0) >= 25, 'extraits disponibles par niveau : ' + JSON.stringify(pool));
+  await p.click('#tab-sing');
+  check(await p.locator('#chScore svg.score').count() === 1, 'lecture chantée : une partition est affichée');
+  const t0 = await p.innerText('.chhead h3');
+  await p.click('#chNext'); await p.click('#chNames');
+  check(await p.locator('#chScore svg .lb').count() > 0, 'lecture chantée : les noms des notes peuvent être affichés');
+  await p.evaluate(() => stopAudio());
+  await p.click('#chPlay');
+  check(await p.evaluate(() => CH.voices.length > 3), 'lecture chantée : la mélodie est jouée avec sa tonique');
+  await p.evaluate(() => stopSeq());
+  await p.click('#chSet summary'); await p.click('#ch-clef-tenor');
+  check(await p.locator('#chScore svg.score').count() === 1 && (await p.innerText('.chkey')).includes('ut 4e'), 'lecture chantée : changement de clé');
+  await p.click('#chSet summary'); await p.click('#ch-mode-oreille');
+  check(await p.locator('#chScore svg').count() === 0 && await p.locator('#chReveal').count() === 1, 'oreille : la partition est cachée jusqu’à la révélation');
+  await p.click('#chReveal');
+  check(await p.locator('#chScore svg.score').count() === 1, 'oreille : la partition apparaît à la demande');
+  await p.click('#chSet summary'); await p.click('#ch-mode-deg');
+  const ans = await p.evaluate(() => CH.deg.d);
+  await p.click('#dg-' + ans);
+  check((await p.innerText('#dgFb')).startsWith('Juste'), 'degrés : bonne réponse reconnue');
+  await p.click('#chSet summary'); await p.click('#ch-mode-lire'); await p.click('#chFlag');
+  check(await p.evaluate(() => CS().flags.length === 1), 'lecture chantée : une erreur peut être signalée');
+  // 6 sexies. import d'une œuvre
+  await p.click('#tab-sing'); await p.click('#chSet summary').catch(() => {});
+  for (const f of ['t.musicxml', 't.mxl', 't.mscx', 't.mscz']) {
+    await p.evaluate(() => { if (!document.getElementById('impSet').open) document.getElementById('impSet').open = true; });
+    await p.setInputFiles('#scoreFile', path.join(__dirname, 'fix', f));
+    await p.waitForSelector('#impAdd', { timeout: 4000 }).catch(() => {});
+    const info = await p.evaluate(() => ({ err: IMP.err, n: IMP.piece && IMP.piece.bars.length, k: IMP.piece && IMP.piece.k, m: IMP.piece && IMP.piece.m, bars: IMP.piece && IMP.piece.bars.join('|'), t: IMP.title }));
+    check(!info.err && info.n === 6 && info.k === 'D' && info.m === '4/4', 'import ' + f + ' : lu (' + JSON.stringify(info) + ')');
+    check(await p.locator('#impPrev svg.score').count() === 1, 'import ' + f + ' : aperçu affiché');
+    await p.click('#impAdd');
+    check(await p.locator('#impDel-' + await p.evaluate(() => customs().slice(-1)[0].id)).count() === 1, 'import ' + f + ' : ajouté à la liste');
+  }
+  check(await p.evaluate(() => customs().length === 4 && pieces().length === CHANT.length + 4), 'import : quatre œuvres dans le répertoire');
+  const okAll = await p.evaluate(() => { try { for (const pc of customs()) for (const cl of ['bass', 'tenor', 'treble']) for (const t of [{ letter: 'C', acc: 0 }, { letter: 'E', acc: -1 }, { letter: 'F', acc: 1 }]) { const m = buildModel(pc, 0, 4, t, cl); drawScore(m, { width: 500, lines: 2, labels: true }); } return true } catch (e) { return e.message } });
+  check(okAll === true, 'import : gravure dans toutes les clés et tons (' + okAll + ')');
+  const delId = await p.evaluate(() => customs()[0].id);
+  await p.click('#impDel-' + delId); await p.click('#impDel-' + delId);
+  check(await p.evaluate(() => customs().length === 3), 'import : œuvre retirée après confirmation');
+  await p.evaluate(() => { state.chantCustom = []; save(); });
+  await p.evaluate(() => { tab = 'today'; render(); });
 
   // 7. impression, onglets
   await p.click('#tab-week'); await p.click('#printWeekBtn');

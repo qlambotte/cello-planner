@@ -35,9 +35,10 @@ function toolsHtml(){
     +ic('drone','Bourdon','<path d="M3 12c3-6 5-6 6 0s3 6 6 0 4-6 6 0"/>')
     +'</div>'
     +'<section class="tool" data-tool="tuner" id="tl-tuner"><div class="thead"><h3><button class="topen" id="tuOpen" onclick="openTuner()">Accordeur</button></h3><button class="tclose" id="tuClose" onclick="closeTuner()" aria-label="Fermer l’accordeur">✕</button></div>'
-    +'<div class="tbody tuner"><div class="turead"><span class="tunote" id="tuNote">—</span><span class="tuhz" id="tuHz">&nbsp;</span></div>'
-    +'<div class="needle" aria-hidden="true"><i id="tuNeedle"></i></div><div class="tucents" id="tuCents">&nbsp;</div>'
-    +'<div class="tuctl"><button class="btn small" id="tuBtn" onclick="toggleTuner()">Écouter</button><button class="btn ghost small" id="tuRef" onclick="playMidi(57,3)" title="La 220 Hz (corde à vide), d’après le diapason">▶ La</button>'+diapHtml('diapSel-t')+'</div></div></section>'
+    +'<div class="tbody tuner"><div class="turead"><span class="tunote" id="tuNote">—</span><span class="tustr" id="tuStr">&nbsp;</span></div>'
+    +'<div class="tugauge" aria-hidden="true"><span class="tuflat">♭</span><div class="needle"><b class="tick" style="left:25%"></b><b class="tick" style="left:75%"></b><i id="tuNeedle"></i></div><span class="tusharp">♯</span></div>'
+    +'<div class="tucents" id="tuCents" aria-live="polite">Joue une note</div><div class="tuhz" id="tuHz">&nbsp;</div>'
+    +'<div class="tuctl"><button class="btn small" id="tuBtn" onclick="toggleTuner()">Écouter</button><button class="btn ghost small" id="tuRef" onclick="playMidi(57,3)" title="La 220 Hz (corde à vide), d’après le diapason">▶ Jouer un La</button>'+diapHtml('diapSel-t')+'</div></div></section>'
     +'<section class="tool" data-tool="metro" id="tl-metro"><div class="thead"><h3>Métronome</h3></div><div class="tbody wheel">'+metroSvg()+'</div></section>'
     +'<section class="tool" data-tool="drone" id="tl-drone"><div class="thead"><h3>Bourdon</h3></div><div class="tbody wheel">'+droneSvg()+'</div></section>';
 }
@@ -51,6 +52,7 @@ function initTools(){
 function selTool(k){
   if(k==='tuner'&&TL.sel!=='tuner')TL.tuner=true;
   TL.sel=TL.sel===k?null:k;paintTools();
+  if(TL.sel==='tuner'&&!TU)toggleTuner();
 }
 /* ---- métronome : roulette ---- */
 function setBpm(v){
@@ -104,23 +106,34 @@ async function toggleTuner(){
 }
 function stopTuner(){
   if(!TU)return;clearInterval(TU.iv);try{TU.src.disconnect();TU.stream.getTracks().forEach(t=>t.stop())}catch(e){}
-  TU=null;paintTools();
+  TU=null;showPitch(null);paintTools();
 }
-function openTuner(){TL.tuner=true;paintTools()}
+function openTuner(){TL.tuner=true;paintTools();if(!TU)toggleTuner()}
 function closeTuner(){stopTuner();TL.tuner=false;if(TL.sel==='tuner')TL.sel=null;paintTools()}
+const CORDES={36:'Do (corde grave)',43:'Sol (corde)',50:'Ré (corde)',57:'La (corde)'};
 function tunerStep(){
   if(!TU)return;
   TU.an.getFloatTimeDomainData(TU.buf);
   const f=detectPitch(TU.buf,actx.sampleRate);
   TU.hist.push(f);if(TU.hist.length>5)TU.hist.shift();
   const v=TU.hist.filter(Boolean).sort((a,b)=>a-b);
-  const n=document.getElementById('tuNote'),hz=document.getElementById('tuHz'),cs=document.getElementById('tuCents'),nd=document.getElementById('tuNeedle');
+  if(v.length>=2){TU.last=Date.now();showPitch(v[v.length>>1])}
+  else if(!TU.last||Date.now()-TU.last>1500)showPitch(null);   // garde la dernière mesure 1,5 s après la fin du son
+}
+function pitchInfo(f){
+  const m=69+12*Math.log2(f/A4()),r=Math.round(m),c=(m-r)*100;
+  return {midi:r,name:midiName(r),cents:c,target:A4()*Math.pow(2,(r-69)/12)};
+}
+function showPitch(f){
+  const n=document.getElementById('tuNote'),hz=document.getElementById('tuHz'),cs=document.getElementById('tuCents'),nd=document.getElementById('tuNeedle'),st=document.getElementById('tuStr');
   if(!n)return;
-  if(v.length<3){n.textContent='—';hz.innerHTML='&nbsp;';cs.innerHTML='&nbsp;';nd.style.left='50%';nd.classList.remove('ok');return}
-  const fm=v[v.length>>1],m=69+12*Math.log2(fm/A4()),r=Math.round(m),c=(m-r)*100;
-  n.textContent=midiName(r);hz.textContent=fm.toFixed(1)+' Hz';
-  cs.textContent=(c>0?'+':'')+Math.round(c)+' cents';
-  nd.style.left=(50+Math.max(-50,Math.min(50,c)))+'%';nd.classList.toggle('ok',Math.abs(c)<=5);
+  if(!f){n.textContent='—';hz.innerHTML='&nbsp;';cs.textContent=TU?'Joue une note':'Appuie sur Écouter';st.innerHTML='&nbsp;';nd.style.left='50%';nd.className='';return}
+  const i=pitchInfo(f),c=Math.round(i.cents),a=Math.abs(i.cents);
+  n.textContent=i.name;st.textContent=CORDES[i.midi]||'';
+  hz.textContent=f.toFixed(1)+' Hz · cible '+i.target.toFixed(1)+' Hz';
+  cs.textContent=a<=5?'Juste ('+(c>0?'+':'')+c+' cents)':Math.abs(c)+' cents '+(c>0?'trop haut ↓ baisse':'trop bas ↑ monte');
+  nd.style.left=(50+Math.max(-50,Math.min(50,i.cents)))+'%';
+  nd.className=a<=5?'ok':a<=15?'near':'';
 }
 /* ---- affichage ---- */
 function paintTools(){

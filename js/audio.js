@@ -56,11 +56,12 @@ function startDrone(slot,ton,hi,fifth){
   if(typeof paintTools==='function')paintTools();
 }
 function redrone(slot){const l=document.getElementById('droneLbl-'+slot);if(l)l.textContent=droneLabel(slot);if(drone&&drone.slot===slot){stopDrone();toggleDrone(slot)}}
-function playMidi(m,dur){
-  const c=ctx(),bus=celloBus(c),t=c.currentTime,f=midiFreq(m);
+function playMidi(m,dur,delay){
+  const c=ctx(),bus=celloBus(c),t=c.currentTime+(delay||0),f=midiFreq(m);
   const vs=[celloVoice(c,f,bus.input,.5,-3),celloVoice(c,f,bus.input,.5,3)];
-  const g=bus.out.gain;g.setValueAtTime(0,t);g.linearRampToValueAtTime(.55,t+.08);g.setValueAtTime(.55,t+dur);g.linearRampToValueAtTime(0,t+dur+.5);
   vs.forEach(v=>v.o.stop(t+dur+.6));
+  const g=bus.out.gain;g.setValueAtTime(0,t);g.linearRampToValueAtTime(.55,t+.08);g.setValueAtTime(.55,t+dur);g.linearRampToValueAtTime(0,t+dur+.5);
+  return {stop(){const n=c.currentTime;try{g.cancelScheduledValues(n);g.setValueAtTime(g.value,n);g.linearRampToValueAtTime(0,n+.08);vs.forEach(v=>v.o.stop(n+.12))}catch(e){}}};
 }
 function droneLabel(slot){
   const t=document.getElementById('tonicSel-'+slot),f=document.getElementById('fifthChk-'+slot),o=document.getElementById('octSel-'+slot);

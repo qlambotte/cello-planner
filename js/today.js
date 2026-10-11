@@ -3,7 +3,7 @@
 let PH={date:null,i:0};
 const PHASE_NAMES={chant:'Oreille',lect:'Lecture chantée',cible:'Travail ciblé',rep:'Révision',dechiff:'Déchiffrage',continu:'En continu',enreg:'Enregistrement',repet:'Répétition',clot:'Bilan'};
 function phaseTitle(b){return b.type==='rep'&&b.it?PHASE_NAMES.rep+' · '+name(b.it):PHASE_NAMES[b.type]||b.type}
-function gotoPhase(i){PH.i=i;render();window.scrollTo(0,0)}
+function gotoPhase(i){PH.i=i;guidedFollow(i);render();window.scrollTo(0,0)}
 function gotoBlock(bid){
   if(!PH.date)return;
   const idx=daysBetween(state.weekStart,PH.date);if(idx<0||idx>6)return;
@@ -50,11 +50,12 @@ function overviewHtml(P,blocks,done,date,log){
   const end=addDays(state.weekStart,6),toLesson=daysBetween(date,end),total=blocks.reduce((a,b)=>a+b.min,0);
   const doneMin=blocks.filter(b=>done[b.id]).reduce((a,b)=>a+b.min,0);
   let h='<div class="dayhead"><div><p class="eyebrow">Jour '+(P.k+1)+' sur 7 · '+(P.lesson?'jour de cours':toLesson===1?'cours demain':'cours dans '+toLesson+' jours')+'</p><h2>'+esc(fmtLong(date))+'</h2></div></div>';
+  h+='<p class="eyebrow" id="minlbl" >Temps disponible</p><div class="chips" role="group" aria-labelledby="minlbl">'+[15,20,25,30,45,60].map(v=>'<button class="chip" id="min-'+v+'" aria-pressed="'+(P.minutes===v)+'" onclick="setMin(\''+date+'\','+v+')">'+v+' min</button>').join('')+'</div>';
+  h+='<div class="btnrow" style="margin-top:10px;margin-bottom:6px"><button class="btn ghost small" id="addTime" onclick="addTime(\''+date+'\',15)">+ 15 min plus tard dans la journée</button></div>';
+  if(doneMin)h+='<p class="sub" style="margin-bottom:8px">Déjà fait aujourd’hui : '+doneMin+' min sur '+total+'. Ajouter du temps garde ce qui est coché et ajoute des phases à la suite.</p>';
+  h+='<div style="height:10px"></div>';
   h+=focusHtml(P);
   h+='<ol class="plist">'+blocks.map((b,k)=>'<li><button class="prow'+(done[b.id]?' on':'')+'" id="pr-'+b.id+'" onclick="gotoPhase('+(k+1)+')"><span class="pn">'+(done[b.id]?'✓':(k+1))+'</span><span class="pt">'+esc(phaseTitle(b))+'</span><span class="pm">'+b.min+' min</span></button></li>').join('')+'</ol>';
-  h+='<p class="eyebrow" id="minlbl" style="margin-top:14px">Temps disponible</p><div class="chips" role="group" aria-labelledby="minlbl">'+[15,20,25,30,45,60].map(v=>'<button class="chip" id="min-'+v+'" aria-pressed="'+(P.minutes===v)+'" onclick="setMin(\''+date+'\','+v+')">'+v+' min</button>').join('')+'</div>';
-  h+='<div class="btnrow" style="margin-top:10px"><button class="btn ghost small" id="addTime" onclick="addTime(\''+date+'\',15)">+ 15 min plus tard dans la journée</button></div>';
-  if(doneMin)h+='<p class="sub" style="margin-top:8px">Déjà fait aujourd’hui : '+doneMin+' min sur '+total+'. Ajouter du temps garde ce qui est coché et ajoute des phases à la suite.</p>';
   h+='<div class="guide" style="margin-top:14px"><button class="btn" id="guideBtn" onclick="toggleGuided(\''+date+'\')">Démarrer la séance guidée</button><span class="sub">Les chronos s’enchaînent, chaque phase est cochée à la fin. L’écran reste allumé.</span></div>';
   h+='<div style="margin-top:14px"><button class="btn ghost small" id="printDay" onclick="printDays([\''+date+'\'])">Imprimer la fiche du jour</button></div>';
   return h;
