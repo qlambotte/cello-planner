@@ -37,8 +37,10 @@ function planWeek(){
       if(!inactive)slot++;
       const sc=items.map((i,ix)=>({i,ix,d:wt(i)*(inactive?slot+1:slot)-cnt[i.id]}))
         .sort((a,b)=>b.d-a.d||cnt[a.i.id]-cnt[b.i.id]||a.ix-b.ix);
-      const pr=sc[0].i,sec=sc[1]?sc[1].i:null,ter=sc[2]?sc[2].i:null;
-      P={date,k,lesson:false,minutes:m,pr,pass:pick(pr,cnt[pr.id],stuck[pr.id]),
+      const ov=log&&log.pick?byId(log.pick.pr):null;       // morceau choisi à la main pour ce jour
+      const pr=ov||sc[0].i,rest=sc.map(x=>x.i).filter(i=>i!==pr),sec=rest[0]||null,ter=rest[1]||null;
+      const opass=ov?passOf(ov,log.pick.pass):null;
+      P={date,k,lesson:false,minutes:m,pr,pass:opass||pick(pr,cnt[pr.id],stuck[pr.id]),chosen:!!ov,
          sec,spass:pick(sec,sec?cnt[sec.id]+scnt[sec.id]:0),ter,tpass:pick(ter,ter?cnt[ter.id]+scnt[ter.id]:0)};
       P.skipped=inactive;P.missed=date<today&&!inactive;P.passFirst=!seen.has(key(P.pr,P.pass));
       if(!P.missed&&!inactive){markSeen(P);cnt[pr.id]++;delete stuck[pr.id];if(sec)scnt[sec.id]++;if(ter)scnt[ter.id]++}

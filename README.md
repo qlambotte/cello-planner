@@ -73,3 +73,7 @@ npm test
 Dans le mode « Lecture chantée », le volet « Ajouter une œuvre » accepte les fichiers MuseScore (`.mscz`, `.mscx`) et MusicXML (`.musicxml`, `.xml`, `.mxl`). Tu peux corriger le titre, le compositeur, le mode et le niveau, et vérifier l'aperçu avant d'ajouter. L'œuvre est gardée dans l'appareil (et dans l'export JSON) et entre dans le tirage comme les autres, dans tous les tons et toutes les clés.
 
 Limites : seule la première voix de la partie choisie est lue (accords : la note la plus haute), les reprises ne sont pas dépliées, les changements de métrique en cours de pièce ne sont pas gérés, et les triolets sont approximatifs. Si un fichier MuseScore échoue, l'exporter en MusicXML (Fichier > Exporter) est la solution de secours. Les fichiers d'essai sont dans `tests/fix/`.
+
+## Son et outils (v9)
+
+Le timbre de violoncelle (notes de la lecture chantée, La de référence) est synthétisé avec un spectre riche, des résonances de caisse, un bruit d'archet discret, un vibrato qui s'installe sur les notes longues et une petite réverbération. Le La de l'accordeur est tenu sans vibrato et s'arrête en retapant le bouton. Le bourdon est une voix unique, exacte, sans battements parasites : tonique seule, avec la quinte pure (3:2) ou avec l'octave (le centre de la roulette passe de l'un à l'autre). Taper sur le nom d'un outil l'ouvre ou le ferme (et l'arrête). Dans « Travail ciblé », le menu « Morceau à travailler » permet de remplacer le choix automatique pour la journée.

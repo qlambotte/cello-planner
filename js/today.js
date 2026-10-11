@@ -117,7 +117,7 @@ function blockHtml(b,P,done,date){
       +(it&&it.key?'<p class="sub">Tonalité : '+esc(it.key)+' ('+esc(name(it))+')</p>':'')
       +(b.min>=8?'<p>Ajoute les intervalles : depuis la tonique, chante une tierce, une quinte, une octave, puis vérifie sur l’instrument.</p>':'')
       +(PRINT?'<p>Bourdon sur <strong>'+esc(ton)+'</strong></p>'
-        :droneTools('a',ton,'<button class="btn ghost small" id="refA" onclick="playMidi(57,3)" title="La de la corde à vide, d’après le diapason">▶ La pour accorder</button>'));
+        :droneTools('a',ton,'<button class="btn ghost small refBtn" id="refA" data-l="▶ La pour accorder" onclick="toggleRefTone()" title="La de la corde à vide, d’après le diapason">▶ La pour accorder</button>'));
   }else if(b.type==='lect'){
     title='Lecture chantée';
     const L=lectureSource(P,date),tf=tonicFor(P),dflt=(P.pr&&P.pr.tonic)||(tf&&tf.tonic)||'Sol';
@@ -205,6 +205,11 @@ function cibleHtml(b,P,date){
   h+='<p><strong>'+esc(p?p.label:'')+'</strong>'+(p&&p.bars?' · '+esc(p.bars):(p&&it.kind!=='etude'?' · <span class="todo">mesures à préciser</span>':''))+(p&&p.tempo?' · '+esc(p.tempo):'')+'</p>';
   if(it.goal)h+='<p class="sub">Objectif : '+esc(it.goal)+'</p>';
   h+=consigneHtml(p);
+  if(!PRINT&&!isDone(state.logs&&state.logs[date])){
+    const cur=(P.chosen?it.id+'|'+(p?p.id:''):'auto');
+    h+='<div class="fld pickf"><label for="pickSel">Morceau à travailler</label><select id="pickSel" onchange="pickPass(\''+date+'\',this.value)"><option value="auto"'+(cur==='auto'?' selected':'')+'>Choix automatique</option>'
+      +state.items.map(x=>'<optgroup label="'+esc(x.title)+'">'+(x.passages||[]).map(q=>{const v=x.id+'|'+q.id;return '<option value="'+v+'"'+(cur===v?' selected':'')+'>'+esc(q.label)+(q.bars?' ('+esc(q.bars)+')':'')+'</option>'}).join('')+'</optgroup>').join('')+'</select></div>';
+  }
   const fb=p?lastFeedback(it.id,p.id,date):null;
   if(fb)h+='<p class="sub">Dernière fois ('+esc(fmtShort(fb.d))+') : <span class="tag '+(fb.r==='coince'?'warn':'')+'">'+(fb.r==='coince'?'ça coinçait':'ça passait')+'</span>'+(fb.n?' « '+esc(fb.n)+' »':'')+'</p>';
   if(it.kind==='etude'){
@@ -232,6 +237,11 @@ function cibleHtml(b,P,date){
     h+='<div class="tempo"><div class="fld"><label for="bpm">Métronome</label><input class="num" type="number" id="bpm" min="20" max="260" value="'+(isNaN(n)?60:n)+'"></div><button class="btn small" id="metroBtn" onclick="toggleMetro()">▶ Métronome</button></div>';
   }
   return h;
+}
+function pickPass(date,v){
+  const l=logOf(date);
+  if(v==='auto')delete l.pick;else{const a=v.split('|');l.pick={pr:a[0],pass:a[1]}}
+  save();const keep=window.scrollY;render();window.scrollTo(0,keep);
 }
 function setStage(id,s){const it=itemOf(id);it.stage=s;save();const keep=window.scrollY;render();window.scrollTo(0,keep)}
 function setTempo(id,v){

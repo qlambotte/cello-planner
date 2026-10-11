@@ -56,6 +56,15 @@ const check = (cond, msg) => { if (!cond) fails.push(msg); console.log((cond ? '
   await p.evaluate(() => { tick('lect', state.weekStart, true); });
   check(await p.evaluate(() => state.logs[state.weekStart].mins === 16), 'minutes jouées = blocs cochés (12 + 4)');
 
+  // 3 bis. choix du morceau du travail ciblé
+  await p.evaluate(() => { tab = 'today'; selDate = addDays(state.weekStart, 3); render(); gotoBlock('cible'); });
+  const pk = await p.evaluate(() => { const P = planWeek()[3], it = state.items.find(i => i.id !== P.pr.id); return { auto: P.pr.id, other: it.id, op: it.passages[0].id } });
+  await p.selectOption('#pickSel', pk.other + '|' + pk.op);
+  check(await p.evaluate(o => planWeek()[3].pr.id === o && planWeek()[3].chosen, pk.other), 'morceau choisi à la main pour la phase de travail ciblé');
+  check(await p.evaluate(o => (document.querySelector('.phase').innerText.includes(state.items.find(i => i.id === o).passages[0].label)), pk.other), 'le morceau choisi est affiché dans la phase');
+  await p.selectOption('#pickSel', 'auto');
+  check(await p.evaluate(a => planWeek()[3].pr.id === a && !planWeek()[3].chosen, pk.auto), 'retour au choix automatique');
+
   // 4. chrono et séance guidée
   await p.evaluate(() => openDay(addDays(state.weekStart, 1)));
   check(await p.locator('.prow').count() === 6, 'aperçu : une ligne par phase');
@@ -131,6 +140,22 @@ const check = (cond, msg) => { if (!cond) fails.push(msg); console.log((cond ? '
   await p.click('#tuBtn'); await p.click('#tuClose');
   check(await p.locator('#tl-tuner .tbody').isVisible() === false, 'accordeur : se ferme');
   await p.click('#tuOpen');
+  await p.click('#tuOpen');
+  check(await p.locator('#tl-tuner .tbody').isVisible() === false, 'accordeur : taper sur le nom le ferme');
+  await p.click('#tuOpen'); await p.click('#tuBtn'); await p.click('#tuBtn');
+  await p.click('#tuRef');
+  check(await p.evaluate(() => !!REFTONE) && (await p.innerText('#tuRef')).includes('Arrêter'), 'La de référence : démarré, bouton « Arrêter »');
+  await p.click('#tuRef');
+  check(await p.evaluate(() => !REFTONE) && (await p.innerText('#tuRef')).includes('Jouer'), 'La de référence : un second appui l’arrête');
+  await p.evaluate(() => startMetro({ bpm: 80 })); await p.click('#meOpen');
+  check(await p.evaluate(() => !metroT && document.getElementById('tl-metro').querySelector('.tbody').offsetParent === null), 'métronome : taper sur le nom le ferme');
+  await p.click('#meOpen');
+  check(await p.locator('#tl-metro .tbody').isVisible(), 'métronome : retaper le rouvre');
+  await p.click('#ds-7'); await p.click('#drOpen');
+  check(await p.evaluate(() => !drone) && await p.locator('#tl-drone .tbody').isVisible() === false, 'bourdon : taper sur le nom le ferme et l’arrête');
+  await p.click('#drOpen');
+  const snd = await p.evaluate(() => { try { const a = playMidi(60, 2), b = playMidi(64, .3, .1); a.stop(); b.stop(); return true } catch (e) { return e.message } });
+  check(snd === true, 'son de violoncelle : notes longues et courtes (' + snd + ')');
   await p.setViewportSize({ width: 820, height: 1180 });
   check(await p.locator('#tl-metro').isVisible() === false && await p.locator('.ticon').count() === 3, 'portrait : trois icônes, outil replié');
   await p.click('#ti-metro');

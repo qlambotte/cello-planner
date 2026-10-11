@@ -137,6 +137,7 @@ audio{width:100%}
 .tool{background:var(--surface)}
 .thead{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px}
 .thead h3{font-size:1rem}
+.topen{cursor:pointer;min-height:36px}
 .topen,.tclose{background:none;border:0;padding:4px 6px;font:inherit;color:inherit;font-family:var(--f-display);font-weight:600}
 .tclose{color:var(--muted);font-size:1.1rem;min-width:36px;min-height:36px}
 .tbody{min-height:0}
@@ -194,6 +195,8 @@ audio{width:100%}
   .tool{border:1px solid var(--line);border-radius:12px;padding:8px 10px}
   #tools[data-tuner="0"] #tl-tuner .tbody,#tools[data-tuner="0"] #tl-tuner .tclose{display:none}
   #tools[data-tuner="0"] #tl-tuner .thead{margin:0}
+  #tools[data-open-metro="0"] #tl-metro .tbody,#tools[data-open-drone="0"] #tl-drone .tbody{display:none}
+  #tools[data-open-metro="0"] #tl-metro .thead,#tools[data-open-drone="0"] #tl-drone .thead{margin:0}
   .wheel svg{width:100%;max-width:240px;height:auto}
 }
 @media (orientation:portrait){

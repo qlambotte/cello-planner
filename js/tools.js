@@ -1,8 +1,8 @@
 /* ---------- panneau d'outils : accordeur, métronome (roulette), bourdon (roulette) ----------
    Construit une seule fois, hors de #app : les outils continuent de sonner quand on change de phase. */
-const TL={sel:null,tuner:true};           // sel : outil ouvert en mode portrait
+const TL={sel:null,tuner:true,metro:true,drone:true};           // sel : outil ouvert en mode portrait
 const MT={bpm:60};
-const DW={fifth:true};
+const DW={ext:1};              // 0 tonique, 1 + quinte pure, 2 + octave
 const SVGNS='http://www.w3.org/2000/svg';
 const polar=(r,deg)=>{const a=(deg-90)*Math.PI/180;return [100+r*Math.cos(a),100+r*Math.sin(a)]};
 const pt=a=>a[0].toFixed(1)+' '+a[1].toFixed(1);
@@ -24,7 +24,7 @@ function droneSvg(){
       +'<path d="M'+pt(o0)+' A96 96 0 0 1 '+pt(o1)+' L'+pt(i1)+' A50 50 0 0 0 '+pt(i0)+' Z"/>'
       +'<text x="'+m[0].toFixed(1)+'" y="'+(m[1]+4).toFixed(1)+'" text-anchor="middle">'+t+'</text></g>';
   });
-  h+='<g id="dwFifth" class="dfifth" role="button" tabindex="0" aria-label="Ajouter la quinte" onclick="toggleFifth()"><circle cx="100" cy="100" r="42"/><text id="dwName" class="wnum2" x="100" y="102" text-anchor="middle">—</text><text id="dwQ" class="wsub" x="100" y="124" text-anchor="middle">+ quinte</text></g></svg>';
+  h+='<g id="dwFifth" class="dfifth" role="button" tabindex="0" aria-label="Changer : tonique seule, avec quinte, avec octave" onclick="toggleFifth()"><circle cx="100" cy="100" r="42"/><text id="dwName" class="wnum2" x="100" y="102" text-anchor="middle">—</text><text id="dwQ" class="wsub" x="100" y="124" text-anchor="middle">+ quinte</text></g></svg>';
   return h;
 }
 function toolsHtml(){
@@ -34,13 +34,13 @@ function toolsHtml(){
     +ic('metro','Métronome','<path d="M8 21h8l-2-17h-4zM12 14l5-7M9 17h6"/>')
     +ic('drone','Bourdon','<path d="M3 12c3-6 5-6 6 0s3 6 6 0 4-6 6 0"/>')
     +'</div>'
-    +'<section class="tool" data-tool="tuner" id="tl-tuner"><div class="thead"><h3><button class="topen" id="tuOpen" onclick="openTuner()">Accordeur</button></h3><button class="tclose" id="tuClose" onclick="closeTuner()" aria-label="Fermer l’accordeur">✕</button></div>'
+    +'<section class="tool" data-tool="tuner" id="tl-tuner"><div class="thead"><h3><button class="topen" id="tuOpen" onclick="toggleTool(\'tuner\')" aria-label="Accordeur : ouvrir ou fermer">Accordeur</button></h3><button class="tclose" id="tuClose" onclick="closeTuner()" aria-label="Fermer l’accordeur">✕</button></div>'
     +'<div class="tbody tuner"><div class="turead"><span class="tunote" id="tuNote">—</span><span class="tustr" id="tuStr">&nbsp;</span></div>'
-    +'<div class="tugauge" aria-hidden="true"><span class="tuflat">♭</span><div class="needle"><b class="tick" style="left:25%"></b><b class="tick" style="left:75%"></b><i id="tuNeedle"></i></div><span class="tusharp">♯</span></div>'
+    +'<div class="tugauge" aria-hidden="true"><span class="tuflat">♭</span><div class="needle"><span class="tuzone" id="tuZone"></span><b class="tick" style="left:25%"></b><b class="tick" style="left:75%"></b><i id="tuNeedle"></i></div><span class="tusharp">♯</span></div>'
     +'<div class="tucents" id="tuCents" aria-live="polite">Joue une note</div><div class="tuhz" id="tuHz">&nbsp;</div>'
-    +'<div class="tuctl"><button class="btn small" id="tuBtn" onclick="toggleTuner()">Écouter</button><button class="btn ghost small" id="tuRef" onclick="playMidi(57,3)" title="La 220 Hz (corde à vide), d’après le diapason">▶ Jouer un La</button>'+diapHtml('diapSel-t')+'</div></div></section>'
-    +'<section class="tool" data-tool="metro" id="tl-metro"><div class="thead"><h3>Métronome</h3></div><div class="tbody wheel">'+metroSvg()+'</div></section>'
-    +'<section class="tool" data-tool="drone" id="tl-drone"><div class="thead"><h3>Bourdon</h3></div><div class="tbody wheel">'+droneSvg()+'</div></section>';
+    +'<div class="tuctl"><button class="btn small" id="tuBtn" onclick="toggleTuner()">Écouter</button><button id="tuRef" class="btn ghost small refBtn" data-l="▶ Jouer un La" onclick="toggleRefTone()" title="La 220 Hz (corde à vide), d’après le diapason">▶ Jouer un La</button>'+diapHtml('diapSel-t')+'</div></div></section>'
+    +'<section class="tool" data-tool="metro" id="tl-metro"><div class="thead"><h3><button class="topen" id="meOpen" onclick="toggleTool(\'metro\')" aria-label="Métronome : ouvrir ou fermer">Métronome</button></h3></div><div class="tbody wheel">'+metroSvg()+'</div></section>'
+    +'<section class="tool" data-tool="drone" id="tl-drone"><div class="thead"><h3><button class="topen" id="drOpen" onclick="toggleTool(\'drone\')" aria-label="Bourdon : ouvrir ou fermer">Bourdon</button></h3></div><div class="tbody wheel">'+droneSvg()+'</div></section>';
 }
 function initTools(){
   const el=document.getElementById('tools');if(!el)return;
@@ -50,6 +50,7 @@ function initTools(){
   paintTools();
 }
 function selTool(k){
+  TL[k]=true;
   if(k==='tuner'&&TL.sel!=='tuner')TL.tuner=true;
   TL.sel=TL.sel===k?null:k;paintTools();
   if(TL.sel==='tuner'&&!TU)toggleTuner();
@@ -87,11 +88,11 @@ function wheelGesture(svg){
 /* ---- bourdon : roulette ---- */
 function droneWheel(t){
   if(drone&&drone.slot==='w'&&drone.ton===t){stopDrone();return}
-  startDrone('w',t,false,DW.fifth);
+  startDrone('w',t,false,DW.ext);
 }
 function toggleFifth(){
-  DW.fifth=!DW.fifth;
-  if(drone&&drone.slot==='w')startDrone('w',drone.ton,false,DW.fifth);else paintTools();
+  DW.ext=(DW.ext+1)%3;
+  if(drone&&drone.slot==='w')startDrone('w',drone.ton,false,DW.ext);else paintTools();
 }
 /* ---- accordeur ---- */
 let TU=null;
@@ -108,8 +109,20 @@ function stopTuner(){
   if(!TU)return;clearInterval(TU.iv);try{TU.src.disconnect();TU.stream.getTracks().forEach(t=>t.stop())}catch(e){}
   TU=null;showPitch(null);paintTools();
 }
+/* toucher le nom d'un outil l'ouvre ou le ferme (fermer = l'arrêter) */
+function toggleTool(k){
+  const portrait=window.matchMedia('(orientation:portrait)').matches;
+  if(k==='tuner'){TL.tuner&&(!portrait||TL.sel==='tuner')?closeTuner():(portrait&&(TL.sel='tuner'),openTuner());return}
+  if(TL[k]){
+    if(k==='metro')stopMetro();else stopDrone();
+    TL[k]=false;if(TL.sel===k)TL.sel=null;
+  }else{TL[k]=true;if(portrait)TL.sel=k}
+  paintTools();
+}
 function openTuner(){TL.tuner=true;paintTools();if(!TU)toggleTuner()}
 function closeTuner(){stopTuner();TL.tuner=false;if(TL.sel==='tuner')TL.sel=null;paintTools()}
+const tol=()=>Math.max(1,Math.min(40,(state&&+state.tolerance)||10));
+function setTolerance(v){state.tolerance=+v;save();paintTools();if(TU&&TU.lastF)showPitch(TU.lastF)}
 const CORDES={36:'Do (corde grave)',43:'Sol (corde)',50:'Ré (corde)',57:'La (corde)'};
 function tunerStep(){
   if(!TU)return;
@@ -128,17 +141,18 @@ function showPitch(f){
   const n=document.getElementById('tuNote'),hz=document.getElementById('tuHz'),cs=document.getElementById('tuCents'),nd=document.getElementById('tuNeedle'),st=document.getElementById('tuStr');
   if(!n)return;
   if(!f){n.textContent='—';hz.innerHTML='&nbsp;';cs.textContent=TU?'Joue une note':'Appuie sur Écouter';st.innerHTML='&nbsp;';nd.style.left='50%';nd.className='';return}
-  const i=pitchInfo(f),c=Math.round(i.cents),a=Math.abs(i.cents);
+  TU&&(TU.lastF=f);
+  const i=pitchInfo(f),c=Math.round(i.cents),a=Math.abs(i.cents),T=tol();
   n.textContent=i.name;st.textContent=CORDES[i.midi]||'';
   hz.textContent=f.toFixed(1)+' Hz · cible '+i.target.toFixed(1)+' Hz';
-  cs.textContent=a<=5?'Juste ('+(c>0?'+':'')+c+' cents)':Math.abs(c)+' cents '+(c>0?'trop haut ↓ baisse':'trop bas ↑ monte');
+  cs.textContent=a<=T?'Juste ('+(c>0?'+':'')+c+' cents)':Math.abs(c)+' cents '+(c>0?'trop haut ↓ baisse':'trop bas ↑ monte');
   nd.style.left=(50+Math.max(-50,Math.min(50,i.cents)))+'%';
-  nd.className=a<=5?'ok':a<=15?'near':'';
+  nd.className=a<=T?'ok':a<=2*T?'near':'';
 }
 /* ---- affichage ---- */
 function paintTools(){
   const el=document.getElementById('tools');if(!el||!document.getElementById('mwSvg'))return;
-  el.dataset.sel=TL.sel||'';el.dataset.tuner=TL.tuner?'1':'0';
+  el.dataset.sel=TL.sel||'';el.dataset.tuner=TL.tuner?'1':'0';el.dataset.openMetro=TL.metro?'1':'0';el.dataset.openDrone=TL.drone?'1':'0';
   ['tuner','metro','drone'].forEach(k=>{const b=document.getElementById('ti-'+k);if(b)b.setAttribute('aria-pressed',String(TL.sel===k||(k==='tuner'&&!TL.sel&&false)))});
   const on=!!metroT,bpm=M?M.bpm:MT.bpm;
   document.getElementById('mwBpm').textContent=bpm;
@@ -149,7 +163,8 @@ function paintTools(){
   const dw=drone&&drone.slot==='w'?drone.ton:null;
   TONICS.forEach((t,i)=>{const g=document.getElementById('ds-'+i);if(g)g.classList.toggle('on',t===dw)});
   document.getElementById('dwName').textContent=drone?drone.ton:'—';
-  document.getElementById('dwQ').textContent=DW.fifth?'+ quinte':'sans quinte';
+  document.getElementById('dwQ').textContent=['tonique seule','+ quinte','+ octave'][DW.ext];
+  const zn=document.getElementById('tuZone');if(zn){zn.style.left=(50-tol())+'%';zn.style.width=(2*tol())+'%'}
   const tb=document.getElementById('tuBtn');if(tb)tb.textContent=TU?'Arrêter':'Écouter';
   const ti=document.getElementById('ti-metro');if(ti)ti.classList.toggle('live',on);
   const td=document.getElementById('ti-drone');if(td)td.classList.toggle('live',!!drone);
@@ -157,6 +172,7 @@ function paintTools(){
 }
 /* après un rendu de #app, les boutons de phase retrouvent l'état réel du son */
 function syncAudioUi(){
+  if(typeof REFTONE!=='undefined'&&REFTONE)document.querySelectorAll('.refBtn').forEach(b=>{b.textContent='■ Arrêter le La'});
   if(drone&&drone.slot!=='w'){const b=document.getElementById('droneBtn-'+drone.slot);if(b)b.textContent='■ Arrêter'}
   if(metroT){const b=document.getElementById('metroBtn');if(b)b.textContent='■ Arrêter'}
   paintTools();
