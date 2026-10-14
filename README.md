@@ -78,6 +78,14 @@ Limites : seule la première voix de la partie choisie est lue (accords : la not
 
 Le timbre de violoncelle (notes de la lecture chantée, La de référence) est synthétisé avec un spectre riche, des résonances de caisse, un bruit d'archet discret, un vibrato qui s'installe sur les notes longues et une petite réverbération. L'accordeur ne joue plus de La (le diapason reste réglable). En portrait, les onglets restent collés sous le panneau d'outils. Le bourdon est une voix unique, exacte, sans battements parasites : tonique seule, avec la quinte pure (3:2) ou avec l'octave (le centre de la roulette passe de l'un à l'autre). Taper sur le nom d'un outil l'ouvre ou le ferme (et l'arrête). Dans « Travail ciblé », le menu « Morceau à travailler » permet de remplacer le choix automatique pour la journée.
 
-## Gamme et arpège (v12)
+## Gamme et arpège (v13)
 
-Dans la phase « Oreille », la gamme ou l'arpège 1-3-5-8 est écrit sur une portée, dans la tonalité du morceau travaillé (majeur ou mineur mélodique, au choix). « Écouter » la joue avec surlignage des notes. « Contrôler mon chant » suit la voix au micro, note par note, à l'octave près : la note passe quand elle est tenue une demi-seconde à ± 25 cents, puis elle se colore (vert ± 15 cents, jaune proche, rouge passée avec « Passer cette note »). Un bilan s'affiche à la fin.
+Dans la phase « Oreille », la gamme ou l'arpège 1-3-5-8 est écrit sur une portée, dans la tonalité du morceau travaillé (majeur ou mineur mélodique, au choix). « Écouter » la joue avec surlignage des notes. « Contrôler mon chant » suit la voix au micro, note par note, à l'octave près : la note passe quand elle est tenue une demi-seconde à ± 25 cents, puis elle se colore (vert ± 15 cents, jaune proche, rouge passée avec « Passer cette note »). Un bilan s'affiche à la fin. La valeur des notes (noires, croches, doubles croches) se choisit pour que la portée reste lisible ; elle ne change pas le contrôle, qui valide chaque note tenue.
+
+## Envoyer la semaine par QR code (v15)
+
+Onglet Semaine, carte « Envoyer ou recevoir la semaine ». Sur le téléphone, « Afficher le QR code de la semaine » encode le programme (éléments, passages, consignes, durées, lectures) dans un ou plusieurs QR codes. Sur la tablette, l'appareil photo du système ouvre le lien dans le navigateur de l'appli : un bandeau propose de remplacer le programme (l'historique est conservé). Si plusieurs QR codes sont nécessaires, on les scanne tous, dans n'importe quel ordre ; les parties reçues sont gardées jusqu'à ce que la semaine soit complète. Alternatives : « Copier le lien » sur le téléphone puis « Recevoir sans scanner » (coller le lien) sur la tablette, ou « Scanner un QR code » dans l'appli là où le navigateur sait lire les QR codes (Chrome sur Android).
+
+Le générateur de QR code est écrit dans `js/qr.js` (sans bibliothèque) ; il a été vérifié avec un décodeur sur toutes les versions de 1 à 40.
+
+Attention (iPad) : une appli ajoutée à l'écran d'accueil a un stockage séparé de celui de Safari. Si la tablette est un iPad, ouvre le lien depuis l'appli (« Recevoir sans scanner ») plutôt que depuis l'appareil photo.

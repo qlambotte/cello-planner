@@ -75,6 +75,10 @@ const check = (cond, msg) => { if (!cond) fails.push(msg); console.log((cond ? '
   check(await p.evaluate(() => SC.model.bars.length === 4), 'gamme en noires : 4 mesures');
   await p.click('#scR-e'); await p.click('#scK-arp');
   check((await p.innerText('#scTitle')).startsWith('Arpège de') && await p.locator('#scScore .nt').count() === 7, 'arpège : 7 notes (1-3-5-8-5-3-1)');
+  check(await p.locator('#scScore svg .lb').count() === 0, 'gamme : noms des notes masqués par défaut');
+  await p.click('#scLbl');
+  check(await p.locator('#scScore svg .lb').count() > 0, 'gamme : les noms peuvent être affichés');
+  await p.click('#scLbl');
   await p.click('#scM-min'); await p.click('#scK-scale');
   check(await p.locator('#scScore .nt').count() === 15 && (await p.innerText('#scTitle')).includes('mineur'), 'gamme mineure : 15 notes');
   const sc144 = await p.evaluate(() => { try { let n = 0; for (const ton of TONICS) for (const md of ['maj', 'min']) for (const kd of ['scale', 'arp']) for (const rh of ['q', 'e', 's']) for (const cl of ['bass', 'tenor', 'treble']) { state.scaleUi = { kind: kd, mode: md, rhy: rh }; state.chant.clef = cl; SC.cfg = { ton, key: '' }; drawScore(scBuild(), { width: 600, lines: 2, labels: true }); n++ } state.scaleUi = { kind: 'scale', mode: 'maj', rhy: 'e' }; state.chant.clef = 'bass'; return n } catch (e) { return e.message } });
@@ -100,6 +104,38 @@ const check = (cond, msg) => { if (!cond) fails.push(msg); console.log((cond ? '
   await p.click('#scSing');
   await p.evaluate(() => { window.detectPitch = window.__dp; });
   await p.evaluate(() => { tab = 'today'; render(); });
+
+  // 3 quater. partage de la semaine par QR code
+  await p.evaluate(() => { tab = 'week'; render(); });
+  await p.evaluate(() => { state.items[0].passages.forEach(q => { q.how = 'Consigne détaillée de la professeure : ' + 'travailler lentement, sans vibrato, en écoutant chaque changement de position. '.repeat(3) }); state.items.push({ id: 'zz', kind: 'piece', title: 'Longue pièce de test', short: 'Longue', tonic: 'Ré', key: 'Ré majeur', weight: 2, goal: 'Objectif ' + 'x'.repeat(200), passages: Array.from({ length: 8 }, (_, i) => ({ id: 'zp' + i, label: 'Passage ' + i, bars: (i * 4 + 1) + ' à ' + (i * 4 + 8), tempo: '♩ = ' + (60 + i), how: 'Écouter ' + 'attentivement '.repeat(8) + i })) }); save(); render(); });
+  await p.click('#shShow'); await p.waitForSelector('#shQr svg');
+  const sh = await p.evaluate(() => ({ n: SH.urls.length, max: Math.max(...SH.urls.map(u => u.length)), cap: document.getElementById('shCap').textContent }));
+  check(sh.n >= 1 && sh.max <= 420, 'partage : QR code(s) générés (' + sh.n + ' code(s), ≤ ' + sh.max + ' caractères)');
+  if (sh.n > 1) { await p.click('#shNext'); check((await p.innerText('#shCap')).startsWith('QR code 2 sur'), 'partage : navigation entre les QR codes'); }
+  const snap = await p.evaluate(() => JSON.stringify({ it: state.items, w: state.weekStart }));
+  const urls = await p.evaluate(() => SH.urls);
+  // réception sur une « autre tablette » : état vierge, lien ouvert (une partie à la fois)
+  const p2 = await browser.newPage();
+  await p2.addInitScript(() => { window.print = () => {}; });
+  await p2.goto(url);
+  await p2.evaluate(() => { state = blankState(); state.items = [newItem('piece')]; state.items[0].title = 'Ancien'; save(); });
+  for (let i = 0; i < urls.length - 1; i++) {
+    await p2.goto(url + urls[i].slice(urls[i].indexOf('#'))); await p2.waitForTimeout(400);
+    check(await p2.locator('#shBanner').count() === 1 && (await p2.innerText('#shBanner')).includes('reçu'), 'réception : partie ' + (i + 1) + ' prise en compte');
+  }
+  await p2.goto(url + urls[urls.length - 1].slice(urls[urls.length - 1].indexOf('#'))); await p2.waitForSelector('#shYes', { timeout: 4000 });
+  check((await p2.innerText('#shBanner')).includes('Semaine reçue') && !(await p2.evaluate(() => location.hash)), 'réception : semaine complète proposée, lien nettoyé');
+  await p2.click('#shYes');
+  const got = await p2.evaluate(() => JSON.stringify({ it: state.items, w: state.weekStart }));
+  check(got === snap, 'réception : programme identique à celui du téléphone');
+  // collage de liens
+  await p2.evaluate(() => { state.items = [newItem('piece')]; save(); tab = 'week'; render(); });
+  await p2.click('#shCard details summary');
+  await p2.fill('#shPaste', urls.join('\n')); await p2.click('#shPasteBtn'); await p2.waitForSelector('#shYes');
+  await p2.click('#shYes');
+  check(await p2.evaluate(() => JSON.stringify({ it: state.items, w: state.weekStart })) === snap, 'réception : liens collés');
+  await p2.close();
+  await p.evaluate(() => { state.items = state.items.filter(i => i.id !== 'zz'); tab = 'today'; render(); });
 
   // 4. chrono et séance guidée
   await p.evaluate(() => { openDay(addDays(state.weekStart, 1)); gotoPhase(0); });

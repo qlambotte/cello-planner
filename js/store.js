@@ -25,6 +25,7 @@ function init(){
   try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist()}catch(e){}
   if('serviceWorker' in navigator&&/^https?:/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
   render();
+  if(typeof shFromHash==='function')shFromHash().then(()=>render());
 }
 function exportData(){
   state.lastExport=todayStr();save();

@@ -22,6 +22,7 @@ function renderWeek(){
     +'<div class="fld"><label for="tolSel">Zone verte de l’accordeur</label><select id="tolSel" onchange="setTolerance(this.value)">'+[3,5,10,15,20].map(v=>'<option value="'+v+'"'+(((+state.tolerance)||10)===v?' selected':'')+'>± '+v+' cents</option>').join('')+'</select></div>'
     +'<div class="fld"><label for="lookSel">Apparence</label><select id="lookSel" onchange="setLook(this.value)">'+LOOKS.map(([k,l])=>'<option value="'+k+'"'+((state.look||"")===k?' selected':'')+'>'+l+'</option>').join('')+'</select></div>'
     +'<p class="sub">La durée peut être changée pour un jour donné depuis l’onglet Aujourd’hui. Le diapason règle le bourdon, les notes jouées et le contrôle de justesse.</p></div>';
+  h+=shHtml();
   h+='<div class="card"><h3>Sauvegarde</h3><p class="sub">Tes données restent sur cette tablette. Dernière sauvegarde : '+(state.lastExport?esc(fmtShort(state.lastExport)):'jamais')+'.</p>'
     +'<div class="btnrow"><button class="btn small" id="exportBtn" onclick="exportData()">Exporter (fichier JSON)</button><button class="btn ghost small" id="importBtn" onclick="chooseImport()">Importer un fichier</button></div>';
   if(pendingImport)h+='<div class="banner"><p>Remplacer les données de cet appareil par le fichier choisi ? Le programme et l’historique actuels seront perdus.</p><div class="btnrow"><button class="btn danger small" id="importYes" onclick="confirmImport()">Remplacer</button><button class="btn ghost small" id="importNo" onclick="cancelImport()">Annuler</button></div></div>';
